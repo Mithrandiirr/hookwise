@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "HookWise — Webhook Intelligence Platform",
+  title: "HookWise - Webhook Intelligence Platform",
   description: "Never miss a webhook. Know why when things break.",
 };
 
@@ -23,9 +23,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#06080d] text-[#e2e4e9]`}
       >
         {children}
       </body>

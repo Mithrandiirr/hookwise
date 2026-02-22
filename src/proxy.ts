@@ -33,8 +33,10 @@ export async function proxy(request: NextRequest) {
 
   const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/signup");
   const isPublicPath =
-    pathname.startsWith("/ingest") ||
+    pathname.startsWith("/api/ingest") ||
     pathname.startsWith("/api/inngest") ||
+    pathname.startsWith("/api/events") ||
+    pathname.startsWith("/api/replay") ||
     pathname === "/";
 
   if (!user && !isAuthPage && !isPublicPath) {

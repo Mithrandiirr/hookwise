@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { db, integrations } from "@/lib/db";
+import { db, integrations, endpoints } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -51,17 +51,32 @@ export async function POST(request: NextRequest) {
 
   const { name, provider, signingSecret, destinationUrl } = parsed.data;
 
-  const [integration] = await db
-    .insert(integrations)
-    .values({
-      userId: user.id,
-      name,
-      provider,
-      signingSecret,
-      destinationUrl,
-      status: "active",
-    })
-    .returning();
+  const result = await db.transaction(async (tx) => {
+    const [integration] = await tx
+      .insert(integrations)
+      .values({
+        userId: user.id,
+        name,
+        provider,
+        signingSecret,
+        destinationUrl,
+        status: "active",
+      })
+      .returning();
 
-  return NextResponse.json(integration, { status: 201 });
+    await tx.insert(endpoints).values({
+      integrationId: integration.id,
+      url: destinationUrl,
+      circuitState: "closed",
+      successRate: 100,
+      avgResponseMs: 0,
+      consecutiveFailures: 0,
+      consecutiveHealthChecks: 0,
+      consecutiveSuccesses: 0,
+    });
+
+    return integration;
+  });
+
+  return NextResponse.json(result, { status: 201 });
 }
