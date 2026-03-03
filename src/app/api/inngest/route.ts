@@ -9,6 +9,11 @@ import { alertDispatcher } from "@/lib/inngest/functions/alert-dispatcher";
 import { reconciliation } from "@/lib/inngest/functions/reconciliation";
 import { flowTracker } from "@/lib/inngest/functions/flow-tracker";
 import { flowTimeoutChecker } from "@/lib/inngest/functions/flow-timeout-checker";
+import { securityScanner } from "@/lib/inngest/functions/security-scanner";
+import { drainRedisBuffer } from "@/lib/inngest/functions/drain-redis-buffer";
+import { sequenceHoldChecker } from "@/lib/inngest/functions/deliver-webhook";
+import { weeklyReport } from "@/lib/inngest/functions/weekly-report";
+import { providerHealthAggregator } from "@/lib/inngest/functions/provider-health-aggregator";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -23,5 +28,10 @@ export const { GET, POST, PUT } = serve({
     reconciliation,
     flowTracker,
     flowTimeoutChecker,
+    securityScanner,
+    drainRedisBuffer,
+    sequenceHoldChecker,
+    weeklyReport,
+    providerHealthAggregator,
   ],
 });

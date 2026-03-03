@@ -92,32 +92,55 @@ export async function POST(
     parsedPayload = { raw: payload };
   }
 
-  // Store event
-  const [newEvent] = await db
-    .insert(events)
-    .values({
-      integrationId,
-      eventType,
-      payload: parsedPayload as Record<string, unknown>,
-      headers: headerRecord,
-      signatureValid: valid,
-      providerEventId,
-    })
-    .returning({ id: events.id });
-
-  // Emit Inngest event async — do NOT await, we need <50ms response
-  inngest
-    .send({
-      name: "webhook/received",
-      data: {
-        eventId: newEvent.id,
+  // Store event — with Redis fallback if Postgres is down
+  try {
+    const [newEvent] = await db
+      .insert(events)
+      .values({
         integrationId,
-        destinationUrl: integration.destinationUrl,
-      },
-    })
-    .catch((err: unknown) => {
-      console.error("[ingest] Failed to emit inngest event", { eventId: newEvent.id, err });
-    });
+        eventType,
+        payload: parsedPayload as Record<string, unknown>,
+        headers: headerRecord,
+        signatureValid: valid,
+        providerEventId,
+      })
+      .returning({ id: events.id });
 
-  return NextResponse.json({ received: true }, { status: 200 });
+    // Emit Inngest event async — do NOT await, we need <50ms response
+    inngest
+      .send({
+        name: "webhook/received",
+        data: {
+          eventId: newEvent.id,
+          integrationId,
+          destinationUrl: integration.destinationUrl,
+        },
+      })
+      .catch((err: unknown) => {
+        console.error("[ingest] Failed to emit inngest event", { eventId: newEvent.id, err });
+      });
+
+    return NextResponse.json({ received: true }, { status: 200 });
+  } catch (dbError) {
+    console.error("[ingest] Postgres insert failed, falling back to Redis buffer", { integrationId, dbError });
+
+    try {
+      const { bufferEvent } = await import("@/lib/redis/fallback-buffer");
+      await bufferEvent({
+        integrationId,
+        eventType,
+        payload: parsedPayload,
+        headers: headerRecord,
+        signatureValid: valid,
+        providerEventId,
+        receivedAt: new Date().toISOString(),
+        destinationUrl: integration.destinationUrl,
+      });
+
+      return NextResponse.json({ received: true, buffered: true }, { status: 200 });
+    } catch (redisError) {
+      console.error("[ingest] Both Postgres and Redis failed", { integrationId, redisError });
+      return NextResponse.json({ error: "Service temporarily unavailable" }, { status: 503 });
+    }
+  }
 }

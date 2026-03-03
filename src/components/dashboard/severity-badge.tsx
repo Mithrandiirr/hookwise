@@ -24,8 +24,8 @@ const config: Record<
   },
   low: {
     label: "Low",
-    bg: "bg-white/[0.04]",
-    text: "text-white/40",
+    bg: "bg-[var(--bg-surface)]",
+    text: "text-[var(--text-tertiary)]",
     glow: "",
   },
 };
@@ -44,7 +44,7 @@ export function SeverityBadge({ severity }: { severity: AnomalySeverity }) {
               ? "bg-red-400"
               : severity === "medium"
                 ? "bg-amber-400"
-                : "bg-white/30"
+                : "bg-[var(--text-muted)]"
         }`}
       />
       {label}

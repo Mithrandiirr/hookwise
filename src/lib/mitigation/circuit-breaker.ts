@@ -1,9 +1,48 @@
 import { db } from "@/lib/db";
-import { endpoints, deliveries } from "@/lib/db/schema";
+import { endpoints, deliveries, integrations } from "@/lib/db/schema";
 import { eq, desc, and } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import type { CircuitState } from "@/types";
 import type { Endpoint } from "@/lib/db/schema";
+
+async function auditCircuitTransition(
+  endpointId: string,
+  previousState: CircuitState,
+  newState: CircuitState
+): Promise<void> {
+  try {
+    const [endpoint] = await db
+      .select({ integrationId: endpoints.integrationId })
+      .from(endpoints)
+      .where(eq(endpoints.id, endpointId))
+      .limit(1);
+    if (!endpoint) return;
+
+    const [integration] = await db
+      .select({ userId: integrations.userId })
+      .from(integrations)
+      .where(eq(integrations.id, endpoint.integrationId))
+      .limit(1);
+    if (!integration) return;
+
+    const action =
+      newState === "open"
+        ? "circuit.opened"
+        : newState === "closed"
+          ? "circuit.closed"
+          : "circuit.half_open";
+
+    const { logAuditEvent } = await import("@/lib/compliance/audit");
+    await logAuditEvent({
+      userId: integration.userId,
+      integrationId: endpoint.integrationId,
+      action: action as "circuit.opened" | "circuit.closed" | "circuit.half_open",
+      details: { endpointId, previousState, newState },
+    });
+  } catch {
+    // Fire-and-forget
+  }
+}
 
 const SLIDING_WINDOW_SIZE = 20;
 const CONSECUTIVE_FAILURES_THRESHOLD = 5;
@@ -120,6 +159,10 @@ export async function recordDeliveryResult(
     return { previousState, newState };
   });
 
+  if (result.previousState !== result.newState) {
+    auditCircuitTransition(endpointId, result.previousState, result.newState);
+  }
+
   return result;
 }
 
@@ -174,6 +217,10 @@ export async function recordHealthCheckResult(
 
     return { previousState, newState };
   });
+
+  if (result.previousState !== result.newState) {
+    auditCircuitTransition(endpointId, result.previousState, result.newState);
+  }
 
   return result;
 }

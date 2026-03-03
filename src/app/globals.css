@@ -7,14 +7,80 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* ── Light mode (default :root) ── */
 :root {
+  --background: #ffffff;
+  --foreground: #111827;
+
+  --bg-page: #f8f9fb;
+  --bg-sidebar: #ffffff;
+  --bg-surface: rgba(0, 0, 0, 0.03);
+  --bg-surface-hover: rgba(0, 0, 0, 0.06);
+  --bg-surface-raised: rgba(0, 0, 0, 0.07);
+
+  --text-primary: #111827;
+  --text-secondary: rgba(17, 24, 39, 0.65);
+  --text-tertiary: rgba(17, 24, 39, 0.45);
+  --text-muted: rgba(17, 24, 39, 0.35);
+  --text-faint: rgba(17, 24, 39, 0.25);
+  --text-ghost: rgba(17, 24, 39, 0.15);
+
+  --border-default: rgba(0, 0, 0, 0.08);
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-strong: rgba(0, 0, 0, 0.15);
+
+  --scrollbar-thumb: rgba(0, 0, 0, 0.12);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+
+  --grid-line: rgba(0, 0, 0, 0.04);
+  --json-bg: rgba(0, 0, 0, 0.03);
+
+  --glow-green: 22, 163, 74;
+  --glow-amber: 217, 119, 6;
+  --glow-red: 220, 38, 38;
+  --glow-blue: 37, 99, 235;
+  --glow-indigo: 79, 70, 229;
+
+  --surface: rgba(0, 0, 0, 0.03);
+  --surface-hover: rgba(0, 0, 0, 0.06);
+  --border: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.15);
+}
+
+/* ── Dark mode ── */
+.dark {
   --background: #06080d;
   --foreground: #e2e4e9;
+
+  --bg-page: #06080d;
+  --bg-sidebar: #080a10;
+  --bg-surface: rgba(255, 255, 255, 0.03);
+  --bg-surface-hover: rgba(255, 255, 255, 0.06);
+  --bg-surface-raised: rgba(255, 255, 255, 0.07);
+
+  --text-primary: #e2e4e9;
+  --text-secondary: rgba(255, 255, 255, 0.60);
+  --text-tertiary: rgba(255, 255, 255, 0.40);
+  --text-muted: rgba(255, 255, 255, 0.25);
+  --text-faint: rgba(255, 255, 255, 0.20);
+  --text-ghost: rgba(255, 255, 255, 0.12);
+
+  --border-default: rgba(255, 255, 255, 0.06);
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-strong: rgba(255, 255, 255, 0.12);
+
+  --scrollbar-thumb: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.2);
+
+  --grid-line: rgba(255, 255, 255, 0.02);
+  --json-bg: rgba(0, 0, 0, 0.4);
+
   --glow-green: 74, 222, 128;
   --glow-amber: 251, 191, 36;
   --glow-red: 248, 113, 113;
   --glow-blue: 96, 165, 250;
   --glow-indigo: 129, 140, 248;
+
   --surface: rgba(255, 255, 255, 0.03);
   --surface-hover: rgba(255, 255, 255, 0.06);
   --border: rgba(255, 255, 255, 0.07);
@@ -30,8 +96,8 @@ body {
 /* Grid background pattern for command-center feel */
 .bg-grid {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 48px 48px;
 }
 
@@ -94,12 +160,12 @@ body {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 
 /* Code / JSON viewer */
 .json-viewer {
-  background: rgba(0, 0, 0, 0.4);
+  background: var(--json-bg);
   border: 1px solid var(--border);
   border-radius: 8px;
   font-variant-ligatures: none;

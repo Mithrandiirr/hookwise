@@ -33,17 +33,17 @@ export default async function IntegrationsPage() {
   const providerColors: Record<string, string> = {
     stripe: "text-violet-400 bg-violet-500/10",
     shopify: "text-green-400 bg-green-500/10",
-    github: "text-white/50 bg-white/5",
+    github: "text-[var(--text-secondary)] bg-[var(--bg-surface)]",
   };
 
   return (
     <div className="space-y-8">
       <div className="flex items-center justify-between fade-up">
         <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-white">
+          <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
             Integrations
           </h1>
-          <p className="text-white/40 mt-1 text-[15px]">
+          <p className="text-[var(--text-tertiary)] mt-1 text-[15px]">
             Manage your webhook integrations
           </p>
         </div>
@@ -58,13 +58,13 @@ export default async function IntegrationsPage() {
 
       {userIntegrations.length === 0 ? (
         <div className="glass rounded-xl p-16 text-center fade-up fade-up-1">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/[0.03] mb-4">
-            <Plug className="h-6 w-6 text-white/20" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--bg-surface)] mb-4">
+            <Plug className="h-6 w-6 text-[var(--text-faint)]" />
           </div>
-          <p className="text-white/50 font-medium text-[15px]">
+          <p className="text-[var(--text-secondary)] font-medium text-[15px]">
             No integrations yet
           </p>
-          <p className="text-white/20 text-sm mt-1 max-w-sm mx-auto">
+          <p className="text-[var(--text-faint)] text-sm mt-1 max-w-sm mx-auto">
             Connect Stripe, Shopify, GitHub, or any webhook provider.
           </p>
           <Link
@@ -83,7 +83,7 @@ export default async function IntegrationsPage() {
               <Link
                 key={integration.id}
                 href={`/integrations/${integration.id}`}
-                className="group glass rounded-xl p-5 flex items-center gap-5 transition-all duration-200 hover:border-white/[0.12]"
+                className="group glass rounded-xl p-5 flex items-center gap-5 transition-all duration-200 hover:border-[var(--border-strong)]"
               >
                 {/* Provider badge */}
                 <div
@@ -101,7 +101,7 @@ export default async function IntegrationsPage() {
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5 mb-1">
-                    <h3 className="font-semibold text-white text-[15px]">
+                    <h3 className="font-semibold text-[var(--text-primary)] text-[15px]">
                       {integration.name}
                     </h3>
                     <span
@@ -126,12 +126,12 @@ export default async function IntegrationsPage() {
                     </span>
                     {endpoint && <HealthDot state={endpoint.circuitState} />}
                   </div>
-                  <div className="flex items-center gap-3 text-[12px] text-white/20">
+                  <div className="flex items-center gap-3 text-[12px] text-[var(--text-faint)]">
                     <span className="font-mono">
                       /api/ingest/{integration.id}
                     </span>
                   </div>
-                  <div className="text-[12px] text-white/15 mt-0.5 truncate">
+                  <div className="text-[12px] text-[var(--text-ghost)] mt-0.5 truncate">
                     {integration.destinationUrl}
                   </div>
                 </div>
@@ -140,25 +140,25 @@ export default async function IntegrationsPage() {
                 {endpoint && (
                   <div className="hidden sm:flex items-center gap-6 shrink-0">
                     <div className="text-right">
-                      <p className="text-[10px] text-white/20 uppercase tracking-wider">
+                      <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">
                         Success
                       </p>
-                      <p className="text-[15px] font-semibold text-white tabular-nums">
+                      <p className="text-[15px] font-semibold text-[var(--text-primary)] tabular-nums">
                         {endpoint.successRate.toFixed(1)}%
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] text-white/20 uppercase tracking-wider">
+                      <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">
                         Latency
                       </p>
-                      <p className="text-[15px] font-semibold text-white tabular-nums">
+                      <p className="text-[15px] font-semibold text-[var(--text-primary)] tabular-nums">
                         {endpoint.avgResponseMs.toFixed(0)}ms
                       </p>
                     </div>
                   </div>
                 )}
 
-                <ArrowUpRight className="h-4 w-4 text-white/10 group-hover:text-white/30 transition-colors shrink-0" />
+                <ArrowUpRight className="h-4 w-4 text-[var(--text-ghost)] group-hover:text-[var(--text-tertiary)] transition-colors shrink-0" />
               </Link>
             );
           })}

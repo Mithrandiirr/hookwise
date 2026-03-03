@@ -65,7 +65,7 @@ export const anomalyDetector = inngest.createFunction(
                 integrationId: integration.id,
                 type: anomaly.type,
                 severity: anomaly.severity,
-                diagnosis: JSON.stringify(diagnosis),
+                diagnosis,
                 context: anomaly.context,
                 detectedAt: new Date(),
               })

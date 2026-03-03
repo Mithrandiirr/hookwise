@@ -92,8 +92,8 @@ export default async function EventDetailPage({
     : {
         icon: <Clock className="h-4 w-4" />,
         label: "Pending delivery",
-        color: "text-white/40",
-        bg: "bg-white/[0.02] border-white/[0.06]",
+        color: "text-[var(--text-tertiary)]",
+        bg: "bg-[var(--bg-surface)] border-[var(--border-default)]",
         glow: "",
       };
 
@@ -103,24 +103,24 @@ export default async function EventDetailPage({
       <div className="flex items-center gap-4 fade-up">
         <Link
           href="/events"
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] text-white/30 hover:text-white/60 hover:border-white/[0.1] transition-all"
+          className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-all"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-white font-mono">
+          <h1 className="text-[22px] font-bold tracking-tight text-[var(--text-primary)] font-mono">
             {event.eventType}
           </h1>
-          <p className="text-white/30 text-[13px] mt-0.5">
+          <p className="text-[var(--text-tertiary)] text-[13px] mt-0.5">
             <Link
               href={`/integrations/${integration.id}`}
-              className="text-white/40 hover:text-white/60 transition-colors"
+              className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
             >
               {integration.name}
             </Link>
-            <span className="mx-2 text-white/15">|</span>
+            <span className="mx-2 text-[var(--text-ghost)]">|</span>
             <span className="capitalize">{integration.provider}</span>
-            <span className="mx-2 text-white/15">|</span>
+            <span className="mx-2 text-[var(--text-ghost)]">|</span>
             {new Date(event.receivedAt).toLocaleString()}
           </p>
         </div>
@@ -150,7 +150,7 @@ export default async function EventDetailPage({
           <div className="glass rounded-xl p-6 fade-up fade-up-2">
             <div className="flex items-center gap-2 mb-4">
               <Zap className="h-4 w-4 text-indigo-400" />
-              <h2 className="text-[15px] font-semibold text-white">
+              <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">
                 Event Details
               </h2>
             </div>
@@ -167,7 +167,7 @@ export default async function EventDetailPage({
                 value={String(eventDeliveries.length)}
               />
               <div className="flex items-center justify-between py-1">
-                <dt className="text-white/30 text-[13px]">Signature</dt>
+                <dt className="text-[var(--text-tertiary)] text-[13px]">Signature</dt>
                 <dd>
                   {event.signatureValid ? (
                     <span className="inline-flex items-center gap-1 text-emerald-400 text-[12px]">
@@ -187,10 +187,10 @@ export default async function EventDetailPage({
 
           {/* Payload */}
           <div className="glass rounded-xl p-6 fade-up fade-up-3">
-            <h2 className="text-[15px] font-semibold text-white mb-4">
+            <h2 className="text-[15px] font-semibold text-[var(--text-primary)] mb-4">
               Payload
             </h2>
-            <pre className="json-viewer text-[12px] text-white/60 overflow-auto max-h-[420px] p-4 font-mono leading-relaxed">
+            <pre className="json-viewer text-[12px] text-[var(--text-secondary)] overflow-auto max-h-[420px] p-4 font-mono leading-relaxed">
               {JSON.stringify(event.payload, null, 2)}
             </pre>
           </div>
@@ -200,11 +200,11 @@ export default async function EventDetailPage({
         <div className="glass rounded-xl p-6 fade-up fade-up-3">
           <div className="flex items-center gap-2 mb-5">
             <Send className="h-4 w-4 text-indigo-400" />
-            <h2 className="text-[15px] font-semibold text-white">
+            <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">
               Delivery Timeline
             </h2>
             {eventDeliveries.length > 0 && (
-              <span className="text-[11px] text-white/20 ml-auto tabular-nums">
+              <span className="text-[11px] text-[var(--text-faint)] ml-auto tabular-nums">
                 {eventDeliveries.length} attempt
                 {eventDeliveries.length !== 1 ? "s" : ""}
               </span>
@@ -212,8 +212,8 @@ export default async function EventDetailPage({
           </div>
           {eventDeliveries.length === 0 ? (
             <div className="py-12 text-center">
-              <Clock className="mx-auto h-8 w-8 text-white/10 mb-3" />
-              <p className="text-white/25 text-sm">
+              <Clock className="mx-auto h-8 w-8 text-[var(--text-ghost)] mb-3" />
+              <p className="text-[var(--text-muted)] text-sm">
                 No delivery attempts yet.
               </p>
             </div>
@@ -241,7 +241,7 @@ export default async function EventDetailPage({
                         className={`w-2.5 h-2.5 rounded-full ${dotColor} mt-1.5 shrink-0 z-10`}
                       />
                       {i < eventDeliveries.length - 1 && (
-                        <div className="w-px flex-1 bg-white/[0.06] my-1" />
+                        <div className="w-px flex-1 bg-[var(--bg-surface-hover)] my-1" />
                       )}
                     </div>
                     {/* Content */}
@@ -253,17 +253,17 @@ export default async function EventDetailPage({
                           Attempt #{delivery.attemptNumber}
                         </span>
                         {delivery.statusCode && (
-                          <span className="font-mono text-[11px] text-white/25 bg-white/[0.03] px-1.5 py-0.5 rounded">
+                          <span className="font-mono text-[11px] text-[var(--text-muted)] bg-[var(--bg-surface)] px-1.5 py-0.5 rounded">
                             {delivery.statusCode}
                           </span>
                         )}
                         {delivery.errorType && (
-                          <span className="text-[11px] text-white/25 bg-red-500/5 border border-red-500/10 px-1.5 py-0.5 rounded">
+                          <span className="text-[11px] text-[var(--text-muted)] bg-red-500/5 border border-red-500/10 px-1.5 py-0.5 rounded">
                             {delivery.errorType}
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 mt-1 text-[11px] text-white/20">
+                      <div className="flex items-center gap-3 mt-1 text-[11px] text-[var(--text-faint)]">
                         <span>
                           {new Date(delivery.attemptedAt).toLocaleString()}
                         </span>
@@ -274,7 +274,7 @@ export default async function EventDetailPage({
                         )}
                       </div>
                       {delivery.responseBody && (
-                        <pre className="mt-2 json-viewer text-[11px] text-white/30 p-2.5 overflow-auto max-h-20 font-mono">
+                        <pre className="mt-2 json-viewer text-[11px] text-[var(--text-tertiary)] p-2.5 overflow-auto max-h-20 font-mono">
                           {delivery.responseBody}
                         </pre>
                       )}
@@ -301,9 +301,9 @@ function DetailRow({
 }) {
   return (
     <div className="flex items-center justify-between py-1">
-      <dt className="text-white/30 text-[13px]">{label}</dt>
+      <dt className="text-[var(--text-tertiary)] text-[13px]">{label}</dt>
       <dd
-        className={`text-white/60 text-[12px] ${mono ? "font-mono" : ""} max-w-[60%] truncate`}
+        className={`text-[var(--text-secondary)] text-[12px] ${mono ? "font-mono" : ""} max-w-[60%] truncate`}
       >
         {value}
       </dd>

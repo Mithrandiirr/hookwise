@@ -8,7 +8,8 @@ const createIntegrationSchema = z.object({
   name: z.string().min(1).max(100),
   provider: z.enum(["stripe", "shopify", "github"]),
   signingSecret: z.string().min(1),
-  destinationUrl: z.string().url(),
+  destinationUrl: z.string().min(1),
+  destinationType: z.enum(["http", "sqs", "kafka", "pubsub"]).default("http"),
 });
 
 export async function GET() {
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { name, provider, signingSecret, destinationUrl } = parsed.data;
+  const { name, provider, signingSecret, destinationUrl, destinationType } = parsed.data;
 
   const result = await db.transaction(async (tx) => {
     const [integration] = await tx
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
         provider,
         signingSecret,
         destinationUrl,
+        destinationType,
         status: "active",
       })
       .returning();
@@ -77,6 +79,16 @@ export async function POST(request: NextRequest) {
 
     return integration;
   });
+
+  // Audit log: integration created (fire-and-forget)
+  import("@/lib/compliance/audit").then(({ logAuditEvent }) =>
+    logAuditEvent({
+      userId: user.id,
+      integrationId: result.id,
+      action: "integration.created",
+      details: { name, provider, destinationUrl },
+    })
+  ).catch(() => {});
 
   return NextResponse.json(result, { status: 201 });
 }

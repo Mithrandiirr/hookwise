@@ -35,9 +35,9 @@ const statusColors: Record<string, { node: string; connector: string; text: stri
     text: "text-amber-400",
   },
   pending: {
-    node: "border-white/[0.08] bg-white/[0.02]",
-    connector: "bg-white/[0.06]",
-    text: "text-white/25",
+    node: "border-[var(--border-strong)] bg-[var(--bg-surface)]",
+    connector: "bg-[var(--border-default)]",
+    text: "text-[var(--text-muted)]",
   },
 };
 
@@ -72,10 +72,10 @@ export function FlowDiagram({
               <span className={`text-[10px] font-semibold uppercase tracking-wider ${colors.text}`}>
                 {integrationNames[step.integrationId] ?? "Unknown"}
               </span>
-              <span className="text-[12px] font-mono text-white/60 mt-1">
+              <span className="text-[12px] font-mono text-[var(--text-secondary)] mt-1">
                 {step.eventType}
               </span>
-              <span className="text-[10px] text-white/15 mt-0.5">
+              <span className="text-[10px] text-[var(--text-ghost)] mt-0.5">
                 {step.correlationField}
               </span>
             </div>
@@ -90,7 +90,7 @@ export function FlowDiagram({
                       ? "border-l-emerald-500/40"
                       : isCurrent
                         ? "border-l-indigo-500/40"
-                        : "border-l-white/[0.08]"
+                        : "border-l-[var(--border-strong)]"
                   }`}
                 />
               </div>

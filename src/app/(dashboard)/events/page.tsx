@@ -45,10 +45,10 @@ export default async function EventsPage() {
   return (
     <div className="space-y-8">
       <div className="fade-up">
-        <h1 className="text-[28px] font-bold tracking-tight text-white">
+        <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
           Events
         </h1>
-        <p className="text-white/40 mt-1 text-[15px]">
+        <p className="text-[var(--text-tertiary)] mt-1 text-[15px]">
           All received webhook events across your integrations
         </p>
       </div>
@@ -56,31 +56,31 @@ export default async function EventsPage() {
       <div className="glass rounded-xl overflow-hidden fade-up fade-up-1">
         {recentEvents.length === 0 ? (
           <div className="p-16 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/[0.03] mb-4">
-              <Activity className="h-6 w-6 text-white/20" />
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--bg-surface)] mb-4">
+              <Activity className="h-6 w-6 text-[var(--text-faint)]" />
             </div>
-            <p className="text-white/50 font-medium">No events yet</p>
-            <p className="text-white/20 text-sm mt-1">
+            <p className="text-[var(--text-secondary)] font-medium">No events yet</p>
+            <p className="text-[var(--text-faint)] text-sm mt-1">
               Events will appear here once webhooks start arriving.
             </p>
           </div>
         ) : (
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="border-b border-white/[0.06]">
-                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+              <tr className="border-b border-[var(--border-default)]">
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   Event Type
                 </th>
-                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   Integration
                 </th>
-                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   Signature
                 </th>
-                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   Source
                 </th>
-                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                   Received
                 </th>
                 <th className="px-5 py-3 w-10" />
@@ -92,7 +92,7 @@ export default async function EventsPage() {
                 return (
                   <tr
                     key={event.id}
-                    className="border-b border-white/[0.04] last:border-0 table-row-hover group"
+                    className="border-b border-[var(--border-subtle)] last:border-0 table-row-hover group"
                   >
                     <td className="px-5 py-3.5">
                       <Link
@@ -102,17 +102,17 @@ export default async function EventsPage() {
                         {event.eventType}
                       </Link>
                     </td>
-                    <td className="px-5 py-3.5 text-white/50">
+                    <td className="px-5 py-3.5 text-[var(--text-secondary)]">
                       {integration ? (
                         <Link
                           href={`/integrations/${integration.id}`}
-                          className="hover:text-white/70 transition-colors flex items-center gap-2"
+                          className="hover:text-[var(--text-secondary)] transition-colors flex items-center gap-2"
                         >
                           <ProviderDot provider={integration.provider} />
                           {integration.name}
                         </Link>
                       ) : (
-                        <span className="text-white/20 font-mono text-[11px]">
+                        <span className="text-[var(--text-faint)] font-mono text-[11px]">
                           {event.integrationId.slice(0, 8)}
                         </span>
                       )}
@@ -131,16 +131,16 @@ export default async function EventsPage() {
                       )}
                     </td>
                     <td className="px-5 py-3.5">
-                      <span className="text-[11px] text-white/25 bg-white/[0.03] px-2 py-0.5 rounded">
+                      <span className="text-[11px] text-[var(--text-muted)] bg-[var(--bg-surface)] px-2 py-0.5 rounded">
                         {event.source}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5 text-white/25 text-[12px] tabular-nums">
+                    <td className="px-5 py-3.5 text-[var(--text-muted)] text-[12px] tabular-nums">
                       {formatTime(event.receivedAt)}
                     </td>
                     <td className="px-5 py-3.5">
                       <Link href={`/events/${event.id}`}>
-                        <ArrowUpRight className="h-3.5 w-3.5 text-white/10 group-hover:text-white/30 transition-colors" />
+                        <ArrowUpRight className="h-3.5 w-3.5 text-[var(--text-ghost)] group-hover:text-[var(--text-tertiary)] transition-colors" />
                       </Link>
                     </td>
                   </tr>
@@ -158,11 +158,11 @@ function ProviderDot({ provider }: { provider: string }) {
   const colors: Record<string, string> = {
     stripe: "bg-violet-400",
     shopify: "bg-green-400",
-    github: "bg-white/40",
+    github: "bg-[var(--text-tertiary)]",
   };
   return (
     <span
-      className={`w-1.5 h-1.5 rounded-full ${colors[provider] ?? "bg-white/20"}`}
+      className={`w-1.5 h-1.5 rounded-full ${colors[provider] ?? "bg-[var(--text-faint)]"}`}
     />
   );
 }

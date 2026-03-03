@@ -74,15 +74,15 @@ export default async function FlowDetailPage({
       <div className="flex items-center gap-4 fade-up">
         <Link
           href="/flows"
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] text-white/30 hover:text-white/60 hover:border-white/[0.1] transition-all"
+          className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-all"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-[22px] font-bold tracking-tight text-white">
+          <h1 className="text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
             {flow.name}
           </h1>
-          <p className="text-white/30 text-[13px] mt-0.5">
+          <p className="text-[var(--text-tertiary)] text-[13px] mt-0.5">
             {steps.length} steps &middot; Timeout: {flow.timeoutMinutes} minutes
           </p>
         </div>
@@ -90,7 +90,7 @@ export default async function FlowDetailPage({
 
       {/* Flow Diagram */}
       <div className="glass rounded-xl p-5 fade-up fade-up-1">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/25 mb-3">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] mb-3">
           Flow Definition
         </h2>
         <FlowDiagram
@@ -105,19 +105,19 @@ export default async function FlowDetailPage({
       <div className="fade-up fade-up-2">
         <div className="flex items-center gap-2 mb-5">
           <div className="w-1 h-4 rounded-full bg-indigo-500" />
-          <h2 className="text-[15px] font-semibold text-white tracking-tight">
+          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
             Instances
           </h2>
-          <span className="text-[11px] text-white/20 ml-auto">
+          <span className="text-[11px] text-[var(--text-faint)] ml-auto">
             {instances.length} instances
           </span>
         </div>
 
         {instances.length === 0 ? (
           <div className="glass rounded-xl p-16 text-center">
-            <Clock className="mx-auto h-8 w-8 text-white/10 mb-3" />
-            <p className="text-white/30 text-sm">No instances yet</p>
-            <p className="text-white/15 text-[12px] mt-1">
+            <Clock className="mx-auto h-8 w-8 text-[var(--text-ghost)] mb-3" />
+            <p className="text-[var(--text-tertiary)] text-sm">No instances yet</p>
+            <p className="text-[var(--text-ghost)] text-[12px] mt-1">
               Instances will appear once matching events are received.
             </p>
           </div>
@@ -125,20 +125,20 @@ export default async function FlowDetailPage({
           <div className="glass rounded-xl overflow-hidden">
             <table className="w-full text-[13px]">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                <tr className="border-b border-[var(--border-default)]">
+                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Status
                   </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Correlation Key
                   </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Started
                   </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Completed
                   </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Duration
                   </th>
                 </tr>
@@ -147,25 +147,25 @@ export default async function FlowDetailPage({
                 {instances.map((instance) => (
                   <tr
                     key={instance.id}
-                    className="border-b border-white/[0.04] last:border-0 table-row-hover"
+                    className="border-b border-[var(--border-subtle)] last:border-0 table-row-hover"
                   >
                     <td className="px-5 py-3.5">
                       <InstanceStatusBadge
                         status={instance.status as FlowInstanceStatus}
                       />
                     </td>
-                    <td className="px-5 py-3.5 font-mono text-[12px] text-white/40">
+                    <td className="px-5 py-3.5 font-mono text-[12px] text-[var(--text-tertiary)]">
                       {instance.correlationKey}
                     </td>
-                    <td className="px-5 py-3.5 text-white/25 text-[12px] tabular-nums">
+                    <td className="px-5 py-3.5 text-[var(--text-muted)] text-[12px] tabular-nums">
                       {formatTime(instance.startedAt)}
                     </td>
-                    <td className="px-5 py-3.5 text-white/25 text-[12px] tabular-nums">
+                    <td className="px-5 py-3.5 text-[var(--text-muted)] text-[12px] tabular-nums">
                       {instance.completedAt
                         ? formatTime(instance.completedAt)
                         : "--"}
                     </td>
-                    <td className="px-5 py-3.5 text-white/25 text-[12px] tabular-nums">
+                    <td className="px-5 py-3.5 text-[var(--text-muted)] text-[12px] tabular-nums">
                       {instance.completedAt
                         ? formatDuration(instance.startedAt, instance.completedAt)
                         : instance.status === "running"

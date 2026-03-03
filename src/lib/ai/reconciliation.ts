@@ -7,7 +7,7 @@ import {
 import { eq, and, gte } from "drizzle-orm";
 import { inngest } from "@/lib/inngest/client";
 import { fetchStripeEvents } from "@/lib/providers/stripe-api";
-import { fetchShopifyOrders } from "@/lib/providers/shopify-api";
+import { fetchShopifyOrders, extractShopifyDomain } from "@/lib/providers/shopify-api";
 import type { Provider } from "@/types";
 
 export interface ReconciliationResult {
@@ -187,15 +187,3 @@ async function fetchProviderEvents(
   return map;
 }
 
-function extractShopifyDomain(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    // If the destination points to a .myshopify.com domain
-    if (parsed.hostname.endsWith(".myshopify.com")) {
-      return parsed.hostname;
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}

@@ -8,6 +8,7 @@ import Link from "next/link";
 import { ArrowLeft, Brain, Target, Zap, Lightbulb, Link2 } from "lucide-react";
 import { SeverityBadge } from "@/components/dashboard/severity-badge";
 import type { AnomalySeverity } from "@/types";
+import { parseDiagnosis } from "@/lib/utils/parse-diagnosis";
 import { ResolveButton } from "./resolve-button";
 
 export default async function AnomalyDetailPage({
@@ -44,17 +45,7 @@ export default async function AnomalyDetailPage({
 
   if (!integration) notFound();
 
-  let diagnosis: {
-    what?: string;
-    why?: string;
-    impact?: string;
-    recommendation?: string;
-    confidence?: number;
-    crossCorrelation?: string | null;
-  } = {};
-  try {
-    diagnosis = JSON.parse(anomaly.diagnosis ?? "{}");
-  } catch { /* noop */ }
+  const diagnosis = parseDiagnosis(anomaly.diagnosis);
 
   const context = anomaly.context as {
     baseline?: {
@@ -76,13 +67,13 @@ export default async function AnomalyDetailPage({
       <div className="flex items-center gap-4 fade-up">
         <Link
           href="/anomalies"
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] text-white/30 hover:text-white/60 hover:border-white/[0.1] transition-all"
+          className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-all"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-[22px] font-bold tracking-tight text-white">
+            <h1 className="text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
               {anomaly.type.replace(/_/g, " ")}
             </h1>
             <SeverityBadge severity={anomaly.severity as AnomalySeverity} />
@@ -92,7 +83,7 @@ export default async function AnomalyDetailPage({
               </span>
             )}
           </div>
-          <p className="text-white/30 text-[13px] mt-0.5">
+          <p className="text-[var(--text-tertiary)] text-[13px] mt-0.5">
             {integration.name} ({integration.provider}) &middot;{" "}
             {new Date(anomaly.detectedAt).toLocaleString()}
           </p>
@@ -133,11 +124,11 @@ export default async function AnomalyDetailPage({
         <div className="glass rounded-xl p-5 fade-up fade-up-2">
           <div className="flex items-center gap-2 mb-3">
             <Link2 className="h-4 w-4 text-indigo-400" />
-            <h3 className="text-[13px] font-semibold text-white">
+            <h3 className="text-[13px] font-semibold text-[var(--text-primary)]">
               Cross-integration correlation
             </h3>
           </div>
-          <p className="text-[13px] text-white/50">{diagnosis.crossCorrelation}</p>
+          <p className="text-[13px] text-[var(--text-secondary)]">{diagnosis.crossCorrelation}</p>
         </div>
       )}
 
@@ -145,22 +136,22 @@ export default async function AnomalyDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 fade-up fade-up-3">
         {/* Confidence */}
         <div className="glass rounded-xl p-5">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/25 mb-3">
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] mb-3">
             AI Confidence
           </h3>
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-2 rounded-full bg-white/[0.05]">
+            <div className="flex-1 h-2 rounded-full bg-[var(--bg-surface)]">
               <div
                 className="h-full rounded-full bg-indigo-500"
                 style={{ width: `${(diagnosis.confidence ?? 0) * 100}%` }}
               />
             </div>
-            <span className="text-[15px] font-semibold text-white tabular-nums">
+            <span className="text-[15px] font-semibold text-[var(--text-primary)] tabular-nums">
               {((diagnosis.confidence ?? 0) * 100).toFixed(0)}%
             </span>
           </div>
           {context?.baseline?.sampleCount && (
-            <p className="text-[11px] text-white/20 mt-2">
+            <p className="text-[11px] text-[var(--text-faint)] mt-2">
               Based on {context.baseline.sampleCount} data points
             </p>
           )}
@@ -169,7 +160,7 @@ export default async function AnomalyDetailPage({
         {/* Baseline vs Current */}
         {context?.baseline && context?.current && (
           <div className="glass rounded-xl p-5">
-            <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/25 mb-3">
+            <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] mb-3">
               Baseline vs Current
             </h3>
             <div className="space-y-3">
@@ -213,9 +204,9 @@ function DiagnosisCard({
     <div className="glass rounded-xl p-5">
       <div className="flex items-center gap-2 mb-3">
         {icon}
-        <h3 className="text-[13px] font-semibold text-white">{title}</h3>
+        <h3 className="text-[13px] font-semibold text-[var(--text-primary)]">{title}</h3>
       </div>
-      <p className="text-[13px] text-white/50 leading-relaxed">{content}</p>
+      <p className="text-[13px] text-[var(--text-secondary)] leading-relaxed">{content}</p>
     </div>
   );
 }
@@ -237,13 +228,13 @@ function MetricCompare({
 
   return (
     <div className="flex items-center justify-between">
-      <span className="text-[12px] text-white/30">{label}</span>
+      <span className="text-[12px] text-[var(--text-tertiary)]">{label}</span>
       <div className="flex items-center gap-3">
-        <span className="text-[12px] text-white/20 tabular-nums">
+        <span className="text-[12px] text-[var(--text-faint)] tabular-nums">
           {baseline.toFixed(1)}{suffix}
         </span>
-        <span className="text-[10px] text-white/10">&rarr;</span>
-        <span className="text-[12px] text-white/50 tabular-nums font-medium">
+        <span className="text-[10px] text-[var(--text-ghost)]">&rarr;</span>
+        <span className="text-[12px] text-[var(--text-secondary)] tabular-nums font-medium">
           {current.toFixed(1)}{suffix}
         </span>
         <span

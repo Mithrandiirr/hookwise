@@ -5,7 +5,7 @@ import * as schema from "./schema";
 const connectionString = process.env.DATABASE_URL!;
 
 // For migrations and server-side use
-const client = postgres(connectionString, { prepare: false });
+const client = postgres(connectionString, { prepare: false, max: 1, idle_timeout: 10 });
 export const db = drizzle(client, { schema });
 
 export * from "./schema";

@@ -61,11 +61,11 @@ export default function NewIntegrationPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <h1 className="text-2xl font-bold text-white">New Integration</h1>
-        <p className="text-gray-400 mt-1">Connect a webhook provider to HookWise</p>
+        <h1 className="text-2xl font-bold text-[var(--text-primary)]">New Integration</h1>
+        <p className="text-[var(--text-tertiary)] mt-1">Connect a webhook provider to HookWise</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6 rounded-xl border border-gray-800 bg-gray-900 p-6">
+      <form onSubmit={handleSubmit} className="space-y-6 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-6">
         {error && (
           <div className="rounded-lg bg-red-900/30 border border-red-800 px-4 py-3 text-sm text-red-400">
             {error}
@@ -73,19 +73,19 @@ export default function NewIntegrationPage() {
         )}
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Integration name</label>
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Integration name</label>
           <input
             type="text"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Stripe Production"
-            className="w-full rounded-lg bg-gray-800 border border-gray-700 px-4 py-2.5 text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Provider</label>
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Provider</label>
           <div className="grid grid-cols-3 gap-3">
             {providers.map((p) => (
               <button
@@ -95,7 +95,7 @@ export default function NewIntegrationPage() {
                 className={`rounded-lg border px-4 py-3 text-sm font-medium transition-colors ${
                   provider === p.value
                     ? "border-indigo-500 bg-indigo-600/20 text-indigo-400"
-                    : "border-gray-700 bg-gray-800 text-gray-400 hover:border-gray-600"
+                    : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-tertiary)] hover:border-[var(--border-strong)]"
                 }`}
               >
                 {p.label}
@@ -105,29 +105,29 @@ export default function NewIntegrationPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Signing secret</label>
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Signing secret</label>
           <input
             type="password"
             required
             value={signingSecret}
             onChange={(e) => setSigningSecret(e.target.value)}
             placeholder={selectedProvider.secretPlaceholder}
-            className="w-full rounded-lg bg-gray-800 border border-gray-700 px-4 py-2.5 text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono text-sm"
+            className="w-full rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono text-sm"
           />
-          <p className="mt-1.5 text-xs text-gray-500">{selectedProvider.hint}</p>
+          <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">{selectedProvider.hint}</p>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1">Destination URL</label>
+          <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">Destination URL</label>
           <input
             type="url"
             required
             value={destinationUrl}
             onChange={(e) => setDestinationUrl(e.target.value)}
             placeholder="https://your-app.com/webhooks"
-            className="w-full rounded-lg bg-gray-800 border border-gray-700 px-4 py-2.5 text-white placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
-          <p className="mt-1.5 text-xs text-gray-500">
+          <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
             HookWise will forward verified webhooks to this URL.
           </p>
         </div>
@@ -143,7 +143,7 @@ export default function NewIntegrationPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            className="rounded-lg bg-gray-800 px-6 py-2.5 text-sm font-medium text-gray-300 hover:bg-gray-700 transition-colors"
+            className="rounded-lg bg-[var(--bg-surface-raised)] px-6 py-2.5 text-sm font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-surface-hover)] transition-colors"
           >
             Cancel
           </button>

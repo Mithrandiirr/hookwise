@@ -23,14 +23,11 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 
-import postgres from "postgres";
-import { drizzle } from "drizzle-orm/postgres-js";
 import * as schema from "../src/lib/db/schema";
+import { db } from "../src/lib/db";
 import { eq, count, desc, and, gte } from "drizzle-orm";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-const client = postgres(process.env.DATABASE_URL!, { prepare: false, ssl: "require" });
-const db = drizzle(client, { schema });
 
 // ─── Helpers ────────────────────────────────────────────
 
@@ -388,7 +385,10 @@ async function phaseD_alertAndResolve() {
   log("phase-d", `\n${anomalyRows.length} active anomaly(ies) in database:`);
   for (const a of anomalyRows) {
     let diag: { what?: string } = {};
-    try { diag = JSON.parse(a.diagnosis ?? "{}"); } catch {}
+    try {
+      const raw = a.diagnosis;
+      diag = typeof raw === "string" ? JSON.parse(raw) : (raw as typeof diag) ?? {};
+    } catch {}
     console.log(`    \x1b[31m●\x1b[0m [${a.severity}] ${a.type} — ${diag.what?.slice(0, 80) ?? "no diagnosis"}`);
   }
 
@@ -461,7 +461,6 @@ async function main() {
     process.exit(1);
   }
 
-  await client.end();
   process.exit(0);
 }
 

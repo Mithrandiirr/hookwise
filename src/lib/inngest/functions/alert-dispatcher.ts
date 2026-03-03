@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { alertConfigs, anomalies, integrations } from "@/lib/db/schema";
 import { eq, and } from "drizzle-orm";
 import { sendEmailAlert, sendSlackAlert } from "@/lib/ai/alerting";
-import type { AIDiagnosis } from "@/lib/ai/types";
+import { parseDiagnosis } from "@/lib/utils/parse-diagnosis";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -47,19 +47,7 @@ export const alertDispatcher = inngest.createFunction(
       return { dispatched: 0, reason: "no-config-or-missing-data" };
     }
 
-    let diagnosis: AIDiagnosis;
-    try {
-      diagnosis = JSON.parse(context.anomaly.diagnosis ?? "{}");
-    } catch {
-      diagnosis = {
-        what: "Anomaly detected",
-        why: "Unknown",
-        impact: "Unknown",
-        recommendation: "Check dashboard",
-        confidence: 0,
-        crossCorrelation: null,
-      };
-    }
+    const diagnosis = parseDiagnosis(context.anomaly.diagnosis);
 
     const payload = {
       anomalyId,

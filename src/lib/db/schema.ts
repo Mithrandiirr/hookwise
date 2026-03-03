@@ -16,7 +16,7 @@ export const deliveryStatusEnum = pgEnum("delivery_status", ["pending", "deliver
 export const circuitStateEnum = pgEnum("circuit_state", ["closed", "half_open", "open"]);
 export const errorTypeEnum = pgEnum("error_type", ["timeout", "server_error", "rate_limit", "ssl", "connection_refused", "unknown"]);
 export const replayStatusEnum = pgEnum("replay_status", ["pending", "delivering", "delivered", "failed", "skipped"]);
-export const eventSourceEnum = pgEnum("event_source", ["webhook", "reconciliation"]);
+export const eventSourceEnum = pgEnum("event_source", ["webhook", "reconciliation", "enrichment"]);
 export const anomalyTypeEnum = pgEnum("anomaly_type", [
   "response_time_spike",
   "failure_surge",
@@ -29,6 +29,36 @@ export const anomalyTypeEnum = pgEnum("anomaly_type", [
 export const anomalySeverityEnum = pgEnum("anomaly_severity", ["low", "medium", "high", "critical"]);
 export const flowInstanceStatusEnum = pgEnum("flow_instance_status", ["running", "completed", "failed", "timed_out"]);
 export const alertChannelEnum = pgEnum("alert_channel", ["email", "slack"]);
+export const securityScanTypeEnum = pgEnum("security_scan_type", [
+  "signature",
+  "timestamp",
+  "replay",
+  "injection",
+  "full",
+]);
+export const vulnerabilityTypeEnum = pgEnum("vulnerability_type", [
+  "invalid_signature_accepted",
+  "expired_timestamp_accepted",
+  "replay_accepted",
+  "injection_vulnerable",
+  "missing_signature_check",
+  "missing_timestamp_check",
+]);
+export const auditActionEnum = pgEnum("audit_action", [
+  "event.received",
+  "event.delivered",
+  "event.failed",
+  "event.replayed",
+  "circuit.opened",
+  "circuit.closed",
+  "circuit.half_open",
+  "integration.created",
+  "integration.updated",
+  "integration.deleted",
+  "scan.completed",
+  "export.created",
+]);
+export const complianceFormatEnum = pgEnum("compliance_format", ["json", "csv"]);
 
 export const integrations = pgTable("integrations", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -39,6 +69,10 @@ export const integrations = pgTable("integrations", {
   destinationUrl: text("destination_url").notNull(),
   status: integrationStatusEnum("status").notNull().default("active"),
   apiKeyEncrypted: text("api_key_encrypted"),
+  destinationType: text("destination_type").notNull().default("http"),
+  idempotencyEnabled: boolean("idempotency_enabled").notNull().default(false),
+  sequencerEnabled: boolean("sequencer_enabled").notNull().default(false),
+  enrichmentEnabled: boolean("enrichment_enabled").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -58,6 +92,7 @@ export const endpoints = pgTable("endpoints", {
   consecutiveSuccesses: integer("consecutive_successes").notNull().default(0),
   lastHealthCheck: timestamp("last_health_check"),
   stateChangedAt: timestamp("state_changed_at").notNull().defaultNow(),
+  healthScore: real("health_score").notNull().default(100),
 });
 
 export const events = pgTable("events", {
@@ -72,6 +107,9 @@ export const events = pgTable("events", {
   signatureValid: boolean("signature_valid").notNull(),
   providerEventId: text("provider_event_id"),
   source: eventSourceEnum("source").notNull().default("webhook"),
+  amountCents: integer("amount_cents"),
+  enrichedPayload: jsonb("enriched_payload"),
+  sequencePosition: integer("sequence_position"),
 });
 
 export const deliveries = pgTable("deliveries", {
@@ -88,6 +126,8 @@ export const deliveries = pgTable("deliveries", {
   attemptNumber: integer("attempt_number").notNull().default(1),
   attemptedAt: timestamp("attempted_at").notNull().defaultNow(),
   nextRetryAt: timestamp("next_retry_at"),
+  idempotencyKey: text("idempotency_key"),
+  deliveryType: text("delivery_type").notNull().default("initial"),
 });
 
 export const replayQueue = pgTable("replay_queue", {
@@ -147,7 +187,7 @@ export const anomalies = pgTable("anomalies", {
     .references(() => integrations.id),
   type: anomalyTypeEnum("type").notNull(),
   severity: anomalySeverityEnum("severity").notNull(),
-  diagnosis: text("diagnosis"),
+  diagnosis: jsonb("diagnosis"),
   context: jsonb("context"),
   detectedAt: timestamp("detected_at").notNull().defaultNow(),
   resolvedAt: timestamp("resolved_at"),
@@ -205,6 +245,27 @@ export const intelligenceReports = pgTable("intelligence_reports", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+export const idempotencyLog = pgTable("idempotency_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  integrationId: uuid("integration_id")
+    .notNull()
+    .references(() => integrations.id),
+  providerEventId: text("provider_event_id").notNull(),
+  firstSeenAt: timestamp("first_seen_at").notNull().defaultNow(),
+  deliveryCount: integer("delivery_count").notNull().default(1),
+  status: text("status").notNull().default("delivered"),
+});
+
+export const sequencerRules = pgTable("sequencer_rules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  integrationId: uuid("integration_id")
+    .notNull()
+    .references(() => integrations.id),
+  eventOrder: jsonb("event_order").notNull(),
+  holdTimeoutMs: integer("hold_timeout_ms").notNull().default(30000),
+  enabled: boolean("enabled").notNull().default(true),
+});
+
 export type Integration = typeof integrations.$inferSelect;
 export type NewIntegration = typeof integrations.$inferInsert;
 export type Event = typeof events.$inferSelect;
@@ -220,3 +281,81 @@ export type Transformation = typeof transformations.$inferSelect;
 export type Anomaly = typeof anomalies.$inferSelect;
 export type Pattern = typeof patterns.$inferSelect;
 export type AlertConfig = typeof alertConfigs.$inferSelect;
+export type IdempotencyLogEntry = typeof idempotencyLog.$inferSelect;
+export type SequencerRule = typeof sequencerRules.$inferSelect;
+
+// Sprint 5: Security Scanner + Compliance
+
+export const securityScans = pgTable("security_scans", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  endpointId: uuid("endpoint_id")
+    .notNull()
+    .references(() => endpoints.id),
+  scanType: securityScanTypeEnum("scan_type").notNull(),
+  findings: jsonb("findings").notNull().default([]),
+  score: real("score").notNull().default(100),
+  scannedAt: timestamp("scanned_at").notNull().defaultNow(),
+});
+
+export const securityFindings = pgTable("security_findings", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  scanId: uuid("scan_id")
+    .notNull()
+    .references(() => securityScans.id),
+  vulnerabilityType: vulnerabilityTypeEnum("vulnerability_type").notNull(),
+  severity: anomalySeverityEnum("severity").notNull(),
+  description: text("description").notNull(),
+  remediation: text("remediation").notNull(),
+});
+
+export const auditLog = pgTable("audit_log", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  integrationId: uuid("integration_id"),
+  eventId: uuid("event_id"),
+  action: auditActionEnum("action").notNull(),
+  details: jsonb("details").notNull().default({}),
+  integrityHash: text("integrity_hash").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const complianceExports = pgTable("compliance_exports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull(),
+  format: complianceFormatEnum("format").notNull(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  fileUrl: text("file_url"),
+  status: text("status").notNull().default("pending"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// Sprint 6: Network Effects + Provider Status Page
+
+export const providerHealth = pgTable("provider_health", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  provider: providerEnum("provider").notNull(),
+  metricName: text("metric_name").notNull(),
+  value: real("value").notNull(),
+  sampleSize: integer("sample_size").notNull().default(0),
+  measuredAt: timestamp("measured_at").notNull().defaultNow(),
+});
+
+export const benchmarks = pgTable("benchmarks", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  provider: providerEnum("provider").notNull(),
+  eventType: text("event_type").notNull(),
+  p50Latency: real("p50_latency").notNull(),
+  p95Latency: real("p95_latency").notNull(),
+  failureRate: real("failure_rate").notNull(),
+  sampleSize: integer("sample_size").notNull().default(0),
+  period: text("period").notNull().default("5m"),
+  measuredAt: timestamp("measured_at").notNull().defaultNow(),
+});
+
+export type SecurityScan = typeof securityScans.$inferSelect;
+export type SecurityFinding = typeof securityFindings.$inferSelect;
+export type AuditLogEntry = typeof auditLog.$inferSelect;
+export type ComplianceExport = typeof complianceExports.$inferSelect;
+export type ProviderHealth = typeof providerHealth.$inferSelect;
+export type Benchmark = typeof benchmarks.$inferSelect;

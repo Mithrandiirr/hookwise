@@ -19,7 +19,7 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[#06080d]">
+    <div className="flex min-h-screen bg-[var(--bg-page)]">
       <Sidebar />
       <main className="flex-1 overflow-auto bg-grid">
         <div className="mx-auto max-w-7xl px-8 py-8">{children}</div>

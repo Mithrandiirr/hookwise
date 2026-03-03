@@ -1,6 +1,6 @@
 import { inngest } from "../client";
 import { db } from "@/lib/db";
-import { replayQueue, events, endpoints, deliveries } from "@/lib/db/schema";
+import { replayQueue, events, endpoints, deliveries, integrations } from "@/lib/db/schema";
 import { eq, and, asc, inArray } from "drizzle-orm";
 import { deliverPayload } from "@/lib/utils/deliver";
 import { classifyDeliveryError } from "@/lib/utils/classify-error";
@@ -20,6 +20,16 @@ export const replayEngine = inngest.createFunction(
   { event: "endpoint/replay-started" },
   async ({ event, step }) => {
     const { endpointId, integrationId } = event.data;
+
+    // Fetch userId for audit logging
+    const integration = await step.run("fetch-integration", async () => {
+      const [int] = await db
+        .select({ userId: integrations.userId })
+        .from(integrations)
+        .where(eq(integrations.id, integrationId))
+        .limit(1);
+      return int ?? null;
+    });
 
     let totalDelivered = 0;
     let totalSkipped = 0;
@@ -153,16 +163,21 @@ export const replayEngine = inngest.createFunction(
           await step.sleep(`rate-limit-${item.id}`, `${delayMs}ms`);
         }
 
+        // Use enriched payload if available (don't re-fetch during bulk replay)
+        const replayPayload = webhookEvent.enrichedPayload ?? webhookEvent.payload;
+        const replayEnriched = webhookEvent.enrichedPayload !== null;
+
         // Deliver
         const result = await step.run(`deliver-${item.id}`, async () => {
           return deliverPayload(
             currentEndpoint!.url,
-            webhookEvent.payload,
+            replayPayload,
             {
               "X-HookWise-Event-ID": item.eventId,
               "X-HookWise-Timestamp": new Date().toISOString(),
               "X-HookWise-Integration-ID": integrationId,
               "X-HookWise-Replay": "true",
+              ...(replayEnriched ? { "X-HookWise-Enriched": "true" } : {}),
             },
             5_000
           );
@@ -199,6 +214,21 @@ export const replayEngine = inngest.createFunction(
               .set({ status: "delivered", deliveredAt: new Date() })
               .where(eq(replayQueue.id, item.id));
           });
+
+          // Audit log for replay delivery
+          if (integration) {
+            step.run(`audit-replay-${item.id}`, async () => {
+              const { logAuditEvent } = await import("@/lib/compliance/audit");
+              await logAuditEvent({
+                userId: integration.userId,
+                integrationId,
+                eventId: item.eventId,
+                action: "event.replayed",
+                details: { replayItemId: item.id, statusCode: result.statusCode },
+              });
+            }).catch(() => {});
+          }
+
           totalDelivered++;
           consecutiveSuccesses++;
 

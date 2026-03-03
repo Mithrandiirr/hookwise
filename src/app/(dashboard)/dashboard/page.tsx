@@ -91,10 +91,10 @@ export default async function DashboardPage() {
     <div className="space-y-10">
       {/* Header */}
       <div className="fade-up">
-        <h1 className="text-[28px] font-bold tracking-tight text-white">
+        <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
           Overview
         </h1>
-        <p className="text-white/40 mt-1 text-[15px]">
+        <p className="text-[var(--text-tertiary)] mt-1 text-[15px]">
           Webhook intelligence command center
         </p>
       </div>
@@ -133,7 +133,7 @@ export default async function DashboardPage() {
           iconBg={
             stats.failedLastHour > 0
               ? "bg-red-500/10 text-red-400"
-              : "bg-white/5 text-white/30"
+              : "bg-[var(--bg-surface)] text-[var(--text-tertiary)]"
           }
           alert={stats.failedLastHour > 0}
           delay="fade-up fade-up-4"
@@ -146,7 +146,7 @@ export default async function DashboardPage() {
           iconBg={
             stats.activeAnomalies > 0
               ? "bg-amber-500/10 text-amber-400"
-              : "bg-white/5 text-white/30"
+              : "bg-[var(--bg-surface)] text-[var(--text-tertiary)]"
           }
           alert={stats.activeAnomalies > 0}
           delay="fade-up fade-up-5"
@@ -158,7 +158,7 @@ export default async function DashboardPage() {
         <div className="fade-up fade-up-4">
           <div className="flex items-center gap-2 mb-5">
             <div className="w-1 h-4 rounded-full bg-indigo-500" />
-            <h2 className="text-[15px] font-semibold text-white tracking-tight">
+            <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
               Endpoint Health
             </h2>
           </div>
@@ -170,12 +170,12 @@ export default async function DashboardPage() {
                 <Link
                   key={integration.id}
                   href={`/integrations/${integration.id}`}
-                  className="group glass rounded-xl p-5 transition-all duration-200 hover:border-white/[0.12]"
+                  className="group glass rounded-xl p-5 transition-all duration-200 hover:border-[var(--border-strong)]"
                 >
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-2.5">
                       <ProviderIcon provider={integration.provider} />
-                      <span className="text-white font-medium text-[13px]">
+                      <span className="text-[var(--text-primary)] font-medium text-[13px]">
                         {integration.name}
                       </span>
                     </div>
@@ -183,29 +183,29 @@ export default async function DashboardPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-white/25 mb-1">
+                      <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)] mb-1">
                         Success Rate
                       </p>
-                      <p className="text-lg font-semibold text-white tabular-nums">
+                      <p className="text-lg font-semibold text-[var(--text-primary)] tabular-nums">
                         {endpoint.successRate.toFixed(1)}
-                        <span className="text-white/30 text-sm">%</span>
+                        <span className="text-[var(--text-tertiary)] text-sm">%</span>
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-white/25 mb-1">
+                      <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)] mb-1">
                         Avg Response
                       </p>
-                      <p className="text-lg font-semibold text-white tabular-nums">
+                      <p className="text-lg font-semibold text-[var(--text-primary)] tabular-nums">
                         {endpoint.avgResponseMs.toFixed(0)}
-                        <span className="text-white/30 text-sm">ms</span>
+                        <span className="text-[var(--text-tertiary)] text-sm">ms</span>
                       </p>
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-white/[0.05] flex items-center justify-between">
-                    <span className="text-[11px] text-white/20">
+                  <div className="mt-3 pt-3 border-t border-[var(--border-default)] flex items-center justify-between">
+                    <span className="text-[11px] text-[var(--text-faint)]">
                       View details
                     </span>
-                    <ArrowUpRight className="h-3 w-3 text-white/15 group-hover:text-white/40 transition-colors" />
+                    <ArrowUpRight className="h-3 w-3 text-[var(--text-ghost)] group-hover:text-[var(--text-tertiary)] transition-colors" />
                   </div>
                 </Link>
               );
@@ -218,19 +218,19 @@ export default async function DashboardPage() {
       <div className="fade-up fade-up-5">
         <div className="flex items-center gap-2 mb-5">
           <div className="w-1 h-4 rounded-full bg-indigo-500" />
-          <h2 className="text-[15px] font-semibold text-white tracking-tight">
+          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
             Integrations
           </h2>
         </div>
         {userIntegrations.length === 0 ? (
           <div className="glass rounded-xl p-16 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-white/[0.03] mb-4">
-              <Plug className="h-6 w-6 text-white/20" />
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--bg-surface)] mb-4">
+              <Plug className="h-6 w-6 text-[var(--text-faint)]" />
             </div>
-            <p className="text-white/50 font-medium text-[15px]">
+            <p className="text-[var(--text-secondary)] font-medium text-[15px]">
               No integrations yet
             </p>
-            <p className="text-white/20 text-sm mt-1 max-w-sm mx-auto">
+            <p className="text-[var(--text-faint)] text-sm mt-1 max-w-sm mx-auto">
               Add your first integration to start receiving and monitoring
               webhooks.
             </p>
@@ -245,20 +245,20 @@ export default async function DashboardPage() {
           <div className="glass rounded-xl overflow-hidden">
             <table className="w-full text-[13px]">
               <thead>
-                <tr className="border-b border-white/[0.06]">
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                <tr className="border-b border-[var(--border-default)]">
+                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Name
                   </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Provider
                   </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Status
                   </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Health
                   </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-white/25">
+                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
                     Ingest URL
                   </th>
                 </tr>
@@ -269,12 +269,12 @@ export default async function DashboardPage() {
                   return (
                     <tr
                       key={integration.id}
-                      className="border-b border-white/[0.04] last:border-0 table-row-hover"
+                      className="border-b border-[var(--border-subtle)] last:border-0 table-row-hover"
                     >
                       <td className="px-5 py-3.5">
                         <Link
                           href={`/integrations/${integration.id}`}
-                          className="font-medium text-white hover:text-indigo-400 transition-colors"
+                          className="font-medium text-[var(--text-primary)] hover:text-indigo-400 transition-colors"
                         >
                           {integration.name}
                         </Link>
@@ -282,7 +282,7 @@ export default async function DashboardPage() {
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2">
                           <ProviderIcon provider={integration.provider} />
-                          <span className="text-white/50 capitalize">
+                          <span className="text-[var(--text-secondary)] capitalize">
                             {integration.provider}
                           </span>
                         </div>
@@ -294,10 +294,10 @@ export default async function DashboardPage() {
                         {endpoint ? (
                           <CircuitBadge state={endpoint.circuitState} />
                         ) : (
-                          <span className="text-white/15 text-xs">--</span>
+                          <span className="text-[var(--text-ghost)] text-xs">--</span>
                         )}
                       </td>
-                      <td className="px-5 py-3.5 font-mono text-[11px] text-white/25">
+                      <td className="px-5 py-3.5 font-mono text-[11px] text-[var(--text-muted)]">
                         /api/ingest/{integration.id}
                       </td>
                     </tr>
@@ -337,13 +337,13 @@ function StatCard({
         >
           {icon}
         </div>
-        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-white/20">
+        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-faint)]">
           {label}
         </span>
       </div>
       <p
         className={`text-3xl font-bold tabular-nums stat-value ${
-          alert ? "text-red-400" : "text-white"
+          alert ? "text-red-400" : "text-[var(--text-primary)]"
         }`}
       >
         {value}
@@ -406,7 +406,7 @@ function ProviderIcon({ provider }: { provider: string }) {
   const colors: Record<string, string> = {
     stripe: "text-violet-400 bg-violet-500/10",
     shopify: "text-green-400 bg-green-500/10",
-    github: "text-white/60 bg-white/5",
+    github: "text-[var(--text-secondary)] bg-[var(--bg-surface)]",
   };
   const labels: Record<string, string> = {
     stripe: "S",

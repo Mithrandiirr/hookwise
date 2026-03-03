@@ -27,15 +27,15 @@ export default async function NewFlowPage() {
       <div className="flex items-center gap-4 fade-up">
         <Link
           href="/flows"
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.03] border border-white/[0.06] text-white/30 hover:text-white/60 hover:border-white/[0.1] transition-all"
+          className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-all"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-white">
+          <h1 className="text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
             Create Flow
           </h1>
-          <p className="text-white/30 text-[13px] mt-0.5">
+          <p className="text-[var(--text-tertiary)] text-[13px] mt-0.5">
             Define a multi-step event chain to track
           </p>
         </div>
