@@ -16,12 +16,14 @@ export interface BufferedEvent {
 
 export async function bufferEvent(event: BufferedEvent): Promise<void> {
   const redis = getRedisClient();
+  if (!redis) throw new Error("Redis not configured — cannot buffer event");
   await redis.lpush(BUFFER_KEY, JSON.stringify(event));
   await redis.expire(BUFFER_KEY, BUFFER_TTL_SECONDS);
 }
 
 export async function drainBuffer(batchSize = 50): Promise<BufferedEvent[]> {
   const redis = getRedisClient();
+  if (!redis) return [];
   const items: BufferedEvent[] = [];
 
   for (let i = 0; i < batchSize; i++) {
@@ -35,5 +37,6 @@ export async function drainBuffer(batchSize = 50): Promise<BufferedEvent[]> {
 
 export async function getBufferLength(): Promise<number> {
   const redis = getRedisClient();
+  if (!redis) return 0;
   return redis.llen(BUFFER_KEY);
 }

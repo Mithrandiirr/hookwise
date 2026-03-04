@@ -11,7 +11,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:migrate:diagnosis": "npx tsx scripts/migrate-diagnosis.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "dev:inngest": "npx inngest-cli@latest dev",
+    "test:setup-webhooks": "npx tsx scripts/setup-real-webhooks.ts",
+    "test:send-webhooks": "npx tsx scripts/send-webhooks.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
