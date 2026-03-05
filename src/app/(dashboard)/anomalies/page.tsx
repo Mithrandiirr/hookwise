@@ -8,6 +8,7 @@ import { SeverityBadge } from "@/components/dashboard/severity-badge";
 import Link from "next/link";
 import type { AnomalySeverity } from "@/types";
 import { parseDiagnosis } from "@/lib/utils/parse-diagnosis";
+import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
 export default async function AnomaliesPage() {
   const supabase = await createClient();
@@ -40,6 +41,7 @@ export default async function AnomaliesPage() {
 
   return (
     <div className="space-y-8">
+      <RealtimeRefresh tables={["anomalies"]} />
       <div className="fade-up">
         <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
           Anomalies

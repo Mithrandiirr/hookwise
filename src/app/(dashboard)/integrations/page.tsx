@@ -5,6 +5,7 @@ import { db, integrations, endpoints } from "@/lib/db";
 import { eq, desc, inArray } from "drizzle-orm";
 import { Plug, Plus, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
 export default async function IntegrationsPage() {
   const supabase = await createClient();
@@ -38,6 +39,7 @@ export default async function IntegrationsPage() {
 
   return (
     <div className="space-y-8">
+      <RealtimeRefresh tables={["integrations", "endpoints"]} />
       <div className="flex items-center justify-between fade-up">
         <div>
           <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">

@@ -5,6 +5,7 @@ import { inngest } from "@/lib/inngest/client";
 import { verifyStripeSignature, extractStripeEventType, extractStripeEventId } from "@/lib/providers/stripe";
 import { verifyShopifySignature, extractShopifyEventType, extractShopifyEventId } from "@/lib/providers/shopify";
 import { verifyGitHubSignature, extractGitHubEventType, extractGitHubEventId } from "@/lib/providers/github";
+import { checkRateLimit } from "@/lib/redis/rate-limiter";
 
 export const runtime = "nodejs";
 // Edge would be ideal for latency, but we need crypto (Node built-ins)
@@ -58,6 +59,23 @@ export async function POST(
   { params }: { params: Promise<{ integrationId: string }> }
 ) {
   const { integrationId } = await params;
+
+  // Rate limit check (before DB lookup for performance)
+  const rl = await checkRateLimit(integrationId);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Rate limit exceeded" },
+      {
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": String(rl.limit),
+          "X-RateLimit-Remaining": "0",
+          "X-RateLimit-Reset": String(rl.reset),
+          "Retry-After": String(rl.reset - Math.floor(Date.now() / 1000)),
+        },
+      }
+    );
+  }
 
   // Fetch integration (must exist and be active)
   const [integration] = await db

@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
 import { db, events, integrations } from "@/lib/db";
-import { eq, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, count } from "drizzle-orm";
 import {
   Activity,
   CheckCircle,
@@ -10,8 +10,20 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import Link from "next/link";
+import { Pagination } from "@/components/dashboard/pagination";
+import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
-export default async function EventsPage() {
+const PAGE_SIZE = 50;
+
+export default async function EventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const offset = (currentPage - 1) * PAGE_SIZE;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -28,22 +40,32 @@ export default async function EventsPage() {
 
   const integrationIds = userIntegrations.map((i) => i.id);
 
-  const recentEvents =
+  const [recentEvents, totalCount] =
     integrationIds.length > 0
-      ? await db
-          .select()
-          .from(events)
-          .where(inArray(events.integrationId, integrationIds))
-          .orderBy(desc(events.receivedAt))
-          .limit(50)
-      : [];
+      ? await Promise.all([
+          db
+            .select()
+            .from(events)
+            .where(inArray(events.integrationId, integrationIds))
+            .orderBy(desc(events.receivedAt))
+            .limit(PAGE_SIZE)
+            .offset(offset),
+          db
+            .select({ count: count() })
+            .from(events)
+            .where(inArray(events.integrationId, integrationIds)),
+        ])
+      : [[], [{ count: 0 }]];
 
   const integrationMap = Object.fromEntries(
     userIntegrations.map((i) => [i.id, i])
   );
 
+  const total = totalCount[0].count;
+
   return (
     <div className="space-y-8">
+      <RealtimeRefresh tables={["events"]} />
       <div className="fade-up">
         <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
           Events
@@ -150,6 +172,8 @@ export default async function EventsPage() {
           </table>
         )}
       </div>
+
+      <Pagination currentPage={currentPage} totalItems={total} basePath="/events" pageSize={PAGE_SIZE} />
     </div>
   );
 }

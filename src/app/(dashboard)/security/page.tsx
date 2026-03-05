@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { endpoints, integrations, securityScans } from "@/lib/db/schema";
 import { eq, inArray, desc } from "drizzle-orm";
 import { SecurityClient } from "./security-client";
+import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
 export default async function SecurityPage() {
   const supabase = await createClient();
@@ -60,5 +61,10 @@ export default async function SecurityPage() {
     latestScan: scansByEndpoint.get(ep.id) ?? null,
   }));
 
-  return <SecurityClient endpoints={endpointsWithScans} />;
+  return (
+    <>
+      <RealtimeRefresh tables={["security_scans"]} />
+      <SecurityClient endpoints={endpointsWithScans} />
+    </>
+  );
 }

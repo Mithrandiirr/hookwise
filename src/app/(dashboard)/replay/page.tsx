@@ -11,8 +11,20 @@ import {
 import { eq, and, desc, inArray, count, sql } from "drizzle-orm";
 import { RotateCcw, Inbox, CheckCircle, XCircle, Clock } from "lucide-react";
 import Link from "next/link";
+import { Pagination } from "@/components/dashboard/pagination";
+import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
-export default async function ReplayPage() {
+const PAGE_SIZE = 50;
+
+export default async function ReplayPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, parseInt(pageParam ?? "1", 10) || 1);
+  const offset = (currentPage - 1) * PAGE_SIZE;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -93,26 +105,35 @@ export default async function ReplayPage() {
     }
   }
 
-  // Recent replay items (50) joined with events
-  const recentItems = await db
-    .select({
-      id: replayQueue.id,
-      endpointId: replayQueue.endpointId,
-      eventId: replayQueue.eventId,
-      status: replayQueue.status,
-      attempts: replayQueue.attempts,
-      createdAt: replayQueue.createdAt,
-      deliveredAt: replayQueue.deliveredAt,
-      eventType: events.eventType,
-    })
-    .from(replayQueue)
-    .innerJoin(events, eq(replayQueue.eventId, events.id))
-    .where(inArray(replayQueue.endpointId, endpointIds))
-    .orderBy(desc(replayQueue.createdAt))
-    .limit(50);
+  // Recent replay items (paginated) joined with events
+  const [recentItems, replayTotal] = await Promise.all([
+    db
+      .select({
+        id: replayQueue.id,
+        endpointId: replayQueue.endpointId,
+        eventId: replayQueue.eventId,
+        status: replayQueue.status,
+        attempts: replayQueue.attempts,
+        createdAt: replayQueue.createdAt,
+        deliveredAt: replayQueue.deliveredAt,
+        eventType: events.eventType,
+      })
+      .from(replayQueue)
+      .innerJoin(events, eq(replayQueue.eventId, events.id))
+      .where(inArray(replayQueue.endpointId, endpointIds))
+      .orderBy(desc(replayQueue.createdAt))
+      .limit(PAGE_SIZE)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(replayQueue)
+      .where(inArray(replayQueue.endpointId, endpointIds)),
+  ]);
+  const totalReplayItems = replayTotal[0].count;
 
   return (
     <div className="space-y-8">
+      <RealtimeRefresh tables={["replay_queue"]} />
       <Header />
 
       {/* Stat cards */}
@@ -241,6 +262,8 @@ export default async function ReplayPage() {
             </table>
           )}
         </div>
+
+        <Pagination currentPage={currentPage} totalItems={totalReplayItems} basePath="/replay" pageSize={PAGE_SIZE} />
       </div>
     </div>
   );

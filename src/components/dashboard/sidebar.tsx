@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils/cn";
 import {
   Activity,
   AlertTriangle,
+  Bell,
   FileCheck,
   GitBranch,
   Globe,
@@ -33,6 +34,7 @@ const nav: Array<{
   { href: "/events", label: "Events", icon: Activity },
   { href: "/integrations", label: "Integrations", icon: Plug },
   { href: "/anomalies", label: "Anomalies", icon: AlertTriangle },
+  { href: "/alerts", label: "Alerts", icon: Bell },
   { href: "/security", label: "Security", icon: ShieldCheck },
   { href: "/compliance", label: "Compliance", icon: FileCheck },
   { href: "/replay", label: "Replay", icon: RotateCcw },

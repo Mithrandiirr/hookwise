@@ -122,6 +122,62 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(created, { status: 201 });
 }
 
+export async function PATCH(request: NextRequest) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const configId = request.nextUrl.searchParams.get("id");
+  if (!configId) {
+    return NextResponse.json({ error: "Missing id parameter" }, { status: 400 });
+  }
+
+  const body = await request.json();
+  const enabled = body.enabled;
+  if (typeof enabled !== "boolean") {
+    return NextResponse.json({ error: "Invalid request: enabled must be boolean" }, { status: 400 });
+  }
+
+  // Verify ownership via integration
+  const [config] = await db
+    .select()
+    .from(alertConfigs)
+    .where(eq(alertConfigs.id, configId))
+    .limit(1);
+
+  if (!config) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const [integration] = await db
+    .select({ id: integrations.id })
+    .from(integrations)
+    .where(
+      and(
+        eq(integrations.id, config.integrationId),
+        eq(integrations.userId, user.id)
+      )
+    )
+    .limit(1);
+
+  if (!integration) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  const [updated] = await db
+    .update(alertConfigs)
+    .set({ enabled })
+    .where(eq(alertConfigs.id, configId))
+    .returning();
+
+  return NextResponse.json(updated);
+}
+
 export async function DELETE(request: NextRequest) {
   const supabase = await createClient();
   const {

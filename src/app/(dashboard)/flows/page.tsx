@@ -5,6 +5,7 @@ import { db, flows, flowInstances, integrations } from "@/lib/db";
 import { eq, desc, count, and } from "drizzle-orm";
 import { GitBranch, Plus, ArrowUpRight, CheckCircle, Clock, XCircle, AlertTriangle } from "lucide-react";
 import Link from "next/link";
+import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
 export default async function FlowsPage() {
   const supabase = await createClient();
@@ -72,6 +73,7 @@ export default async function FlowsPage() {
 
   return (
     <div className="space-y-8">
+      <RealtimeRefresh tables={["flows", "flow_instances"]} />
       <div className="flex items-center justify-between fade-up">
         <div>
           <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">

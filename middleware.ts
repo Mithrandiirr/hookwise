@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/login", "/signup", "/auth/callback", "/scan"];
+const PUBLIC_ROUTES = ["/login", "/signup", "/auth/callback", "/auth/reset-password", "/forgot-password", "/scan"];
 
 function isPublic(pathname: string): boolean {
   // Static assets and Next.js internals
@@ -25,6 +25,11 @@ function isPublic(pathname: string): boolean {
 
   // Inngest server calls
   if (pathname.startsWith("/api/inngest")) {
+    return true;
+  }
+
+  // Dev receiver (already gated by NODE_ENV check in the route)
+  if (pathname.startsWith("/api/dev")) {
     return true;
   }
 

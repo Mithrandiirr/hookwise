@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { providerHealth, benchmarks } from "@/lib/db/schema";
 import { desc, eq } from "drizzle-orm";
 import { StatusClient } from "./status-client";
+import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
 export const metadata: Metadata = {
   title: "HookWise Status — Provider Health Dashboard",
@@ -109,5 +110,10 @@ async function getStatusData(): Promise<StatusData> {
 
 export default async function StatusPage() {
   const data = await getStatusData();
-  return <StatusClient initialData={data} />;
+  return (
+    <>
+      <RealtimeRefresh tables={["provider_health"]} />
+      <StatusClient initialData={data} />
+    </>
+  );
 }

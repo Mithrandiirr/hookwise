@@ -8,6 +8,7 @@ import {
 } from "@/lib/db";
 import { eq, desc, inArray, sql } from "drizzle-orm";
 import { RefreshCw, Inbox, Search, CheckCircle, AlertTriangle } from "lucide-react";
+import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
 export default async function ReconciliationPage() {
   const supabase = await createClient();
@@ -54,6 +55,7 @@ export default async function ReconciliationPage() {
 
   return (
     <div className="space-y-8">
+      <RealtimeRefresh tables={["reconciliation_runs"]} />
       <Header />
 
       {/* Stat cards */}

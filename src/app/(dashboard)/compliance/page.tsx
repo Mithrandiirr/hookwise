@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { auditLog, complianceExports, integrations, securityScans } from "@/lib/db/schema";
 import { eq, desc, count } from "drizzle-orm";
 import { ComplianceClient } from "./compliance-client";
+import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
 export default async function CompliancePage() {
   const supabase = await createClient();
@@ -50,11 +51,14 @@ export default async function CompliancePage() {
   };
 
   return (
-    <ComplianceClient
-      auditEntries={recentAuditEntries}
-      exports={recentExports}
-      integrationMap={integrationMap}
-      complianceStatus={complianceStatus}
-    />
+    <>
+      <RealtimeRefresh tables={["audit_log"]} />
+      <ComplianceClient
+        auditEntries={recentAuditEntries}
+        exports={recentExports}
+        integrationMap={integrationMap}
+        complianceStatus={complianceStatus}
+      />
+    </>
   );
 }

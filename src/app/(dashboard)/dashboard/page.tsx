@@ -14,6 +14,7 @@ import {
   XOctagon,
 } from "lucide-react";
 import Link from "next/link";
+import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -89,6 +90,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-10">
+      <RealtimeRefresh tables={["events", "endpoints", "anomalies"]} />
       {/* Header */}
       <div className="fade-up">
         <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
