@@ -5,7 +5,6 @@ import {
 import {
   extractShopifyResourceInfo,
   fetchShopifyResource,
-  extractShopifyDomain,
 } from "@/lib/providers/shopify-api";
 
 // Use Pick to only require the fields we actually use — avoids Date vs string
@@ -13,7 +12,7 @@ import {
 interface EnrichableIntegration {
   provider: string;
   apiKeyEncrypted: string | null;
-  destinationUrl: string;
+  providerDomain: string | null;
 }
 
 interface EnrichableEvent {
@@ -59,10 +58,10 @@ export async function enrichEvent(
   if (integration.provider === "shopify") {
     const shopDomain =
       headers["x-shopify-shop-domain"] ??
-      extractShopifyDomain(integration.destinationUrl);
+      integration.providerDomain;
 
     if (!shopDomain) {
-      return { ...EMPTY_RESULT, error: "Could not determine Shopify shop domain" };
+      return { ...EMPTY_RESULT, error: "Could not determine Shopify shop domain. Configure providerDomain on the integration." };
     }
 
     return enrichShopifyEvent(apiKey, shopDomain, webhookEvent.eventType, payload);

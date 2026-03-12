@@ -73,6 +73,7 @@ export const integrations = pgTable("integrations", {
   idempotencyEnabled: boolean("idempotency_enabled").notNull().default(false),
   sequencerEnabled: boolean("sequencer_enabled").notNull().default(false),
   enrichmentEnabled: boolean("enrichment_enabled").notNull().default(false),
+  providerDomain: text("provider_domain"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
