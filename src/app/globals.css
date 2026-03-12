@@ -126,8 +126,10 @@ body {
 
 /* Glass panel */
 .glass {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
 }
 .glass:hover {

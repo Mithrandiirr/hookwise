@@ -7,7 +7,7 @@ const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL
 
 const csp = [
   "default-src 'self'",
-  `script-src 'self'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   `connect-src 'self' https://${supabaseHost} wss://${supabaseHost}`,
   "img-src 'self' data:",

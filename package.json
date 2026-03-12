@@ -13,6 +13,8 @@
     "db:migrate:diagnosis": "npx tsx scripts/migrate-diagnosis.ts",
     "db:studio": "drizzle-kit studio",
     "dev:inngest": "npx inngest-cli@latest dev",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:setup-webhooks": "npx tsx scripts/setup-real-webhooks.ts",
     "test:send-webhooks": "npx tsx scripts/send-webhooks.ts"
   },
@@ -49,6 +51,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.0.18"
   }
 }
