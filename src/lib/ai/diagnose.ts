@@ -1,4 +1,4 @@
-import { getAnthropicClient, AI_MODEL, AI_MAX_TOKENS } from "./client";
+import { chatCompletion } from "./client";
 import { SYSTEM_PROMPT, buildDiagnosisPrompt } from "./prompts";
 import { getCachedDiagnosis, cacheDiagnosis } from "./cache";
 import type { AnomalyContext, AIDiagnosis } from "./types";
@@ -23,22 +23,14 @@ export async function diagnoseAnomaly(
   if (cached) return cached;
 
   try {
-    const client = getAnthropicClient();
     const prompt = buildDiagnosisPrompt(context);
+    const text = await chatCompletion(SYSTEM_PROMPT, prompt);
 
-    const response = await client.messages.create({
-      model: AI_MODEL,
-      max_tokens: AI_MAX_TOKENS,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: prompt }],
-    });
-
-    const textBlock = response.content.find((b) => b.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
+    if (!text) {
       return FALLBACK_DIAGNOSIS;
     }
 
-    const diagnosis = parseDiagnosis(textBlock.text);
+    const diagnosis = parseDiagnosis(text);
     cacheDiagnosis(context.integrationId, context.anomalyType, diagnosis);
     return diagnosis;
   } catch (error) {

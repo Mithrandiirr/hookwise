@@ -54,7 +54,12 @@ export async function updatePayloadSchema(
   }
 
   // Merge new payload into existing schema
-  const currentSchema = existing.jsonSchema as InferredSchema;
+  const raw = existing.jsonSchema as Partial<InferredSchema> | null;
+  const currentSchema: InferredSchema = {
+    fields: raw?.fields ?? {},
+    avgSize: raw?.avgSize ?? 0,
+    sampleCount: raw?.sampleCount ?? 0,
+  };
   const anomalies: string[] = [];
   let schemaChanged = false;
 

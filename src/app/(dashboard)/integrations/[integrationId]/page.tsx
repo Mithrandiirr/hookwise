@@ -160,6 +160,13 @@ export default async function IntegrationDetailPage({
             value={integration.destinationUrl}
             mono
           />
+          {integration.providerDomain && (
+            <ConfigItem
+              label="Provider Domain"
+              value={integration.providerDomain}
+              mono
+            />
+          )}
           <ConfigItem
             label="Created"
             value={new Date(integration.createdAt).toLocaleDateString("en-US", {

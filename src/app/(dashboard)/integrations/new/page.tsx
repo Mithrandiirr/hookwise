@@ -30,6 +30,8 @@ export default function NewIntegrationPage() {
   const [provider, setProvider] = useState<Provider>("stripe");
   const [signingSecret, setSigningSecret] = useState("");
   const [destinationUrl, setDestinationUrl] = useState("");
+  const [apiKey, setApiKey] = useState("");
+  const [providerDomain, setProviderDomain] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -44,7 +46,14 @@ export default function NewIntegrationPage() {
     const res = await fetch("/api/integrations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, provider, signingSecret, destinationUrl }),
+      body: JSON.stringify({
+        name,
+        provider,
+        signingSecret,
+        destinationUrl,
+        ...(apiKey ? { apiKey } : {}),
+        ...(providerDomain ? { providerDomain } : {}),
+      }),
     });
 
     if (!res.ok) {
@@ -131,6 +140,46 @@ export default function NewIntegrationPage() {
             HookWise will forward verified webhooks to this URL.
           </p>
         </div>
+
+        {provider !== "github" && (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                {provider === "stripe" ? "Stripe Secret Key" : "Shopify Admin API Token"}
+                <span className="text-[var(--text-ghost)] font-normal ml-1">(optional)</span>
+              </label>
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={provider === "stripe" ? "sk_live_..." : "shpat_..."}
+                className="w-full rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono text-sm"
+              />
+              <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
+                Enables reconciliation (gap detection) and enriched delivery. Encrypted at rest.
+              </p>
+            </div>
+
+            {provider === "shopify" && (
+              <div>
+                <label className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
+                  Shopify store domain
+                  <span className="text-[var(--text-ghost)] font-normal ml-1">(required for reconciliation)</span>
+                </label>
+                <input
+                  type="text"
+                  value={providerDomain}
+                  onChange={(e) => setProviderDomain(e.target.value)}
+                  placeholder="your-store.myshopify.com"
+                  className="w-full rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono text-sm"
+                />
+                <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
+                  Your Shopify store domain — used to poll the Shopify Admin API for missed webhooks.
+                </p>
+              </div>
+            )}
+          </>
+        )}
 
         <div className="flex gap-3 pt-2">
           <button

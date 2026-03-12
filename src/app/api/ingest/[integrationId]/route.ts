@@ -93,7 +93,9 @@ export async function POST(
   }
 
   const payload = await request.text();
+  console.log("[ingest] payload length:", payload.length, "preview:", payload.slice(0, 200));
   const headerRecord = headersToRecord(request.headers);
+  console.log("[ingest] headers:", JSON.stringify(headerRecord));
 
   const { valid, eventType, providerEventId } = verifySignature(
     integration.provider,

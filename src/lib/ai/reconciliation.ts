@@ -7,7 +7,7 @@ import {
 import { eq, and, gte } from "drizzle-orm";
 import { inngest } from "@/lib/inngest/client";
 import { fetchStripeEvents } from "@/lib/providers/stripe-api";
-import { fetchShopifyOrders, extractShopifyDomain } from "@/lib/providers/shopify-api";
+import { fetchShopifyOrders } from "@/lib/providers/shopify-api";
 import type { Provider } from "@/types";
 
 export interface ReconciliationResult {
@@ -37,6 +37,7 @@ export async function reconcileIntegration(
 
   // For now, use the encrypted key directly — in production this would be decrypted via Supabase Vault
   const apiKey = integration.apiKeyEncrypted;
+  const providerDomain = integration.providerDomain;
   const since = new Date(Date.now() - 10 * 60 * 1000); // last 10 minutes
   const until = new Date();
 
@@ -46,7 +47,7 @@ export async function reconcileIntegration(
     providerEventIds = await fetchProviderEvents(
       integration.provider as Provider,
       apiKey,
-      integration.destinationUrl,
+      providerDomain,
       since,
       until
     );
@@ -154,7 +155,7 @@ export async function reconcileIntegration(
 async function fetchProviderEvents(
   provider: Provider,
   apiKey: string,
-  destinationUrl: string,
+  providerDomain: string | null,
   since: Date,
   until: Date
 ): Promise<Map<string, { type: string; payload: Record<string, unknown> }>> {
@@ -169,17 +170,17 @@ async function fetchProviderEvents(
       });
     }
   } else if (provider === "shopify") {
-    // Extract shop domain from destination URL or use apiKey format
-    const domain = extractShopifyDomain(destinationUrl);
-    if (domain) {
-      const orders = await fetchShopifyOrders(domain, apiKey, since);
-      for (const order of orders) {
-        const eventId = `shopify:order:${order.id}`;
-        map.set(eventId, {
-          type: "orders/create",
-          payload: order as unknown as Record<string, unknown>,
-        });
-      }
+    if (!providerDomain) {
+      console.error("[HookWise Reconciliation] No provider domain configured for Shopify integration");
+      return map;
+    }
+    const orders = await fetchShopifyOrders(providerDomain, apiKey, since);
+    for (const order of orders) {
+      const eventId = `shopify:order:${order.id}`;
+      map.set(eventId, {
+        type: "orders/create",
+        payload: order as unknown as Record<string, unknown>,
+      });
     }
   }
   // GitHub has no reconciliation API
