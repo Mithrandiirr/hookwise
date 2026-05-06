@@ -1,14 +1,16 @@
 export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
+import { db, integrations, reconciliationRuns } from "@/lib/db";
+import { eq, desc, inArray } from "drizzle-orm";
 import {
-  db,
-  integrations,
-  reconciliationRuns,
-} from "@/lib/db";
-import { eq, desc, inArray, sql } from "drizzle-orm";
-import { RefreshCw, Inbox, Search, CheckCircle, AlertTriangle } from "lucide-react";
-import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
+  Chip,
+  Dot,
+  Icon,
+  ProviderMark,
+  DashTopbar,
+  SectionHeader,
+} from "@/components/hw";
 
 export default async function ReconciliationPage() {
   const supabase = await createClient();
@@ -17,195 +19,260 @@ export default async function ReconciliationPage() {
   } = await supabase.auth.getUser();
 
   const userIntegrations = await db
-    .select({ id: integrations.id, name: integrations.name, provider: integrations.provider })
+    .select({
+      id: integrations.id,
+      name: integrations.name,
+      provider: integrations.provider,
+    })
     .from(integrations)
     .where(eq(integrations.userId, user!.id));
 
   const integrationIds = userIntegrations.map((i) => i.id);
-  const integrationMap = Object.fromEntries(
-    userIntegrations.map((i) => [i.id, i])
-  );
+  const integrationMap = new Map(userIntegrations.map((i) => [i.id, i] as const));
 
-  if (integrationIds.length === 0) {
-    return (
-      <div className="space-y-6">
-        <Header />
-        <EmptyState />
-      </div>
-    );
-  }
+  const runs =
+    integrationIds.length > 0
+      ? await db
+          .select()
+          .from(reconciliationRuns)
+          .where(inArray(reconciliationRuns.integrationId, integrationIds))
+          .orderBy(desc(reconciliationRuns.ranAt))
+          .limit(100)
+      : [];
 
-  // Fetch all reconciliation runs
-  const runs = await db
-    .select()
-    .from(reconciliationRuns)
-    .where(inArray(reconciliationRuns.integrationId, integrationIds))
-    .orderBy(desc(reconciliationRuns.ranAt))
-    .limit(100);
-
-  // Aggregate stats
   let totalRuns = runs.length;
   let totalGapsDetected = 0;
   let totalGapsResolved = 0;
-
+  let totalProviderEvents = 0;
   for (const run of runs) {
     totalGapsDetected += run.gapsDetected;
     totalGapsResolved += run.gapsResolved;
+    totalProviderEvents += run.providerEventsFound;
   }
 
   return (
-    <div className="space-y-8">
-      <RealtimeRefresh tables={["reconciliation_runs"]} />
-      <Header />
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 fade-up">
-        <StatCard
-          label="Total Runs"
-          value={totalRuns}
-          icon={<RefreshCw className="h-4 w-4" />}
-          color="text-indigo-400"
-        />
-        <StatCard
-          label="Gaps Detected"
-          value={totalGapsDetected}
-          icon={<Search className="h-4 w-4" />}
-          color="text-amber-400"
-        />
-        <StatCard
-          label="Gaps Resolved"
-          value={totalGapsResolved}
-          icon={<CheckCircle className="h-4 w-4" />}
-          color="text-emerald-400"
-        />
-      </div>
-
-      {/* Run history */}
-      <div className="fade-up">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-1 h-4 rounded-full bg-indigo-500" />
-          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-            Run History
-          </h2>
-          <span className="text-[11px] text-[var(--text-faint)] ml-auto">
-            {runs.length} runs
-          </span>
-        </div>
-
-        {runs.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <div className="space-y-2">
-            {runs.map((run) => {
-              const integration = integrationMap[run.integrationId];
-              return (
-                <div
-                  key={run.id}
-                  className="glass rounded-xl p-4 flex items-center gap-4"
-                >
-                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)]">
-                    {run.gapsDetected > 0 ? (
-                      <AlertTriangle className="h-3.5 w-3.5 text-amber-400" />
-                    ) : (
-                      <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[13px] text-[var(--text-secondary)] font-medium">
-                        {integration?.name ?? "Unknown"}
-                      </span>
-                      <span className="text-[11px] text-[var(--text-ghost)] capitalize bg-[var(--bg-surface)] px-1.5 py-0.5 rounded">
-                        {integration?.provider}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 mt-1">
-                      <span className="text-[11px] text-[var(--text-faint)]">
-                        {run.providerEventsFound} provider events
-                      </span>
-                      <span className="text-[11px] text-[var(--text-faint)]">
-                        {run.hookwiseEventsFound} HookWise events
-                      </span>
-                      {run.gapsDetected > 0 && (
-                        <span className="text-[11px] text-amber-400 font-medium">
-                          {run.gapsDetected} gaps found
-                        </span>
-                      )}
-                      {run.gapsResolved > 0 && (
-                        <span className="text-[11px] text-emerald-400 font-medium">
-                          {run.gapsResolved} resolved
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <span className="text-[11px] text-[var(--text-ghost)] shrink-0 tabular-nums">
-                    {new Date(run.ranAt).toLocaleString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })}
-                  </span>
-                </div>
-              );
-            })}
+    <>
+      <DashTopbar
+        title="Reconciliation"
+        subtitle="HookWise polls provider APIs, compares with ingest log, recovers gaps"
+        right={
+          <div
+            className="flex items-center"
+            style={{
+              gap: 8,
+              padding: "6px 10px",
+              border: "1px solid var(--hw-line-2)",
+              borderRadius: 7,
+            }}
+          >
+            <Dot tone={totalGapsDetected > totalGapsResolved ? "amber" : "green"} />
+            <span
+              className="hw-mono"
+              style={{ fontSize: 11, color: "var(--hw-ink-2)" }}
+            >
+              {totalGapsResolved} recovered · {totalProviderEvents.toLocaleString()} events scanned
+            </span>
           </div>
-        )}
+        }
+      />
+      <div
+        className="hw-scroll flex flex-col"
+        style={{
+          padding: "24px 28px 40px",
+          gap: 20,
+          overflow: "auto",
+          flex: 1,
+        }}
+      >
+        <section
+          className="hw-fade-up grid"
+          style={{ gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}
+        >
+          <Stat
+            label="Total runs"
+            value={totalRuns.toString()}
+            tone="indigo"
+            icon="refresh"
+          />
+          <Stat
+            label="Gaps detected"
+            value={totalGapsDetected.toString()}
+            tone="amber"
+            icon="search"
+          />
+          <Stat
+            label="Gaps resolved"
+            value={totalGapsResolved.toString()}
+            tone="green"
+            icon="check"
+          />
+        </section>
+
+        <section className="hw-fade-up hw-fade-up-1">
+          <div
+            className="hw-panel overflow-hidden"
+            style={{ background: "var(--hw-bg-2)" }}
+          >
+            <div
+              className="flex items-center justify-between"
+              style={{
+                padding: "14px 20px",
+                borderBottom: "1px solid var(--hw-line)",
+              }}
+            >
+              <SectionHeader title="Run history" />
+              <span
+                className="hw-mono"
+                style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+              >
+                {runs.length} runs
+              </span>
+            </div>
+
+            {runs.length === 0 ? (
+              <div
+                style={{
+                  padding: "48px 24px",
+                  textAlign: "center",
+                  fontSize: 12.5,
+                  color: "var(--hw-ink-4)",
+                }}
+              >
+                No reconciliation runs yet. Runs happen every 5 minutes for integrations with API keys configured.
+              </div>
+            ) : (
+              <div>
+                {runs.map((run, i) => {
+                  const integ = integrationMap.get(run.integrationId);
+                  const tone = run.gapsDetected > 0 ? "amber" : "green";
+                  return (
+                    <div
+                      key={run.id}
+                      className="flex items-center"
+                      style={{
+                        padding: "14px 20px",
+                        gap: 14,
+                        borderTop: i ? "1px solid var(--hw-line)" : "none",
+                      }}
+                    >
+                      <div
+                        className="grid place-items-center"
+                        style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: "var(--hw-bg-3)",
+                          border: "1px solid var(--hw-line-2)",
+                        }}
+                      >
+                        <Icon
+                          name={run.gapsDetected > 0 ? "alert" : "check"}
+                          size={14}
+                          color={`var(--hw-${tone})`}
+                        />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div
+                          className="flex items-center flex-wrap"
+                          style={{ gap: 8, marginBottom: 4 }}
+                        >
+                          {integ && (
+                            <ProviderMark provider={integ.provider} size={14} />
+                          )}
+                          <span
+                            style={{
+                              fontSize: 13,
+                              color: "var(--hw-ink)",
+                              fontWeight: 500,
+                            }}
+                          >
+                            {integ?.name ?? "—"}
+                          </span>
+                          {integ && (
+                            <Chip>{integ.provider}</Chip>
+                          )}
+                        </div>
+                        <div
+                          className="flex items-center flex-wrap"
+                          style={{ gap: 10 }}
+                        >
+                          <span
+                            className="hw-mono"
+                            style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+                          >
+                            {run.providerEventsFound} provider · {run.hookwiseEventsFound} received
+                          </span>
+                          {run.gapsDetected > 0 && (
+                            <Chip tone="amber">
+                              {run.gapsDetected} gap
+                              {run.gapsDetected === 1 ? "" : "s"}
+                            </Chip>
+                          )}
+                          {run.gapsResolved > 0 && (
+                            <Chip tone="green">
+                              {run.gapsResolved} resolved
+                            </Chip>
+                          )}
+                        </div>
+                      </div>
+                      <span
+                        className="hw-mono hw-num"
+                        style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+                      >
+                        {new Date(run.ranAt).toLocaleString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: false,
+                        })}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
       </div>
-    </div>
+    </>
   );
 }
 
-function Header() {
-  return (
-    <div className="flex items-center gap-3 fade-up">
-      <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-        <RefreshCw className="h-4.5 w-4.5 text-emerald-400" />
-      </div>
-      <div>
-        <h1 className="text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
-          Reconciliation
-        </h1>
-        <p className="text-[13px] text-[var(--text-tertiary)]">
-          Polls provider APIs to detect and recover webhook events that were never delivered.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({
+function Stat({
   label,
   value,
+  tone,
   icon,
-  color,
 }: {
   label: string;
-  value: number;
-  icon: React.ReactNode;
-  color: string;
+  value: string;
+  tone: "amber" | "green" | "indigo";
+  icon: "refresh" | "search" | "check";
 }) {
+  const color =
+    tone === "amber"
+      ? "var(--hw-amber)"
+      : tone === "green"
+        ? "var(--hw-green)"
+        : "var(--hw-indigo-ink)";
   return (
-    <div className="glass rounded-xl p-5">
-      <div className="flex items-center gap-1.5 mb-3">
-        <span className={color}>{icon}</span>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          {label}
-        </p>
+    <div
+      className="hw-panel"
+      style={{ padding: "18px 20px", background: "var(--hw-bg-2)" }}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="hw-label">{label}</div>
+          <div
+            className="hw-mono hw-num"
+            style={{ fontSize: 26, fontWeight: 500, marginTop: 6, color }}
+          >
+            {value}
+          </div>
+        </div>
+        <Icon name={icon} size={16} color={color} />
       </div>
-      <p className={`text-3xl font-bold tabular-nums ${color}`}>{value}</p>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="glass rounded-xl p-16 text-center">
-      <Inbox className="mx-auto h-8 w-8 text-[var(--text-ghost)] mb-3" />
-      <p className="text-[var(--text-tertiary)] text-sm">
-        No reconciliation runs yet. Runs happen automatically every 5 minutes for integrations with API keys configured.
-      </p>
     </div>
   );
 }

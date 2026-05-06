@@ -11,14 +11,12 @@ const scanRequestSchema = z.object({
 });
 
 export async function POST(request: Request) {
+  // Auth is optional — the public scanner works without signup.
+  // If logged in, integrationId comparison is available.
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
 
   let body: unknown;
   try {

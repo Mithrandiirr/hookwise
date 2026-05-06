@@ -1,19 +1,18 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db, events, deliveries, integrations, replayQueue } from "@/lib/db";
 import { eq, and, desc } from "drizzle-orm";
-import { notFound } from "next/navigation";
 import {
-  CheckCircle,
-  XCircle,
-  Clock,
-  ArrowLeft,
-  AlertTriangle,
-  Zap,
-  Send,
-} from "lucide-react";
-import Link from "next/link";
+  Chip,
+  Dot,
+  Icon,
+  ProviderMark,
+  DashTopbar,
+  SectionHeader,
+} from "@/components/hw";
 import { ReplayButton } from "./replay-button";
 
 export default async function EventDetailPage({
@@ -32,7 +31,6 @@ export default async function EventDetailPage({
     .from(events)
     .where(eq(events.id, eventId))
     .limit(1);
-
   if (!event) notFound();
 
   const [integration] = await db
@@ -41,11 +39,10 @@ export default async function EventDetailPage({
     .where(
       and(
         eq(integrations.id, event.integrationId),
-        eq(integrations.userId, user!.id)
-      )
+        eq(integrations.userId, user!.id),
+      ),
     )
     .limit(1);
-
   if (!integration) notFound();
 
   const eventDeliveries = await db
@@ -59,238 +56,348 @@ export default async function EventDetailPage({
     .from(replayQueue)
     .where(eq(replayQueue.eventId, eventId));
 
-  const replayItem = replayItems.length > 0 ? replayItems[0] : null;
-  const lastDelivery = eventDeliveries.length > 0 ? eventDeliveries[0] : null;
+  const replayItem = replayItems[0] ?? null;
+  const lastDelivery = eventDeliveries[0] ?? null;
   const hasSuccessfulDelivery = eventDeliveries.some(
-    (d) => d.status === "delivered"
+    (d) => d.status === "delivered",
   );
 
-  const statusConfig = hasSuccessfulDelivery
-    ? {
-        icon: <CheckCircle className="h-4 w-4" />,
-        label: "Delivered successfully",
-        color: "text-emerald-400",
-        bg: "bg-emerald-500/5 border-emerald-500/10",
-        glow: "glow-green",
-      }
-    : replayItem
-    ? {
-        icon: <Clock className="h-4 w-4" />,
-        label: `Queued for replay (${replayItem.status})`,
-        color: "text-amber-400",
-        bg: "bg-amber-500/5 border-amber-500/10",
-        glow: "glow-amber",
-      }
-    : lastDelivery
-    ? {
-        icon: <XCircle className="h-4 w-4" />,
-        label: `Delivery failed${lastDelivery.errorType ? ` - ${lastDelivery.errorType}` : ""}`,
-        color: "text-red-400",
-        bg: "bg-red-500/5 border-red-500/10",
-        glow: "glow-red",
-      }
-    : {
-        icon: <Clock className="h-4 w-4" />,
-        label: "Pending delivery",
-        color: "text-[var(--text-tertiary)]",
-        bg: "bg-[var(--bg-surface)] border-[var(--border-default)]",
-        glow: "",
-      };
+  type Tone = "green" | "amber" | "red" | "indigo";
+  let bannerTone: Tone = "indigo";
+  let bannerLabel = "Pending delivery";
+  if (hasSuccessfulDelivery) {
+    bannerTone = "green";
+    bannerLabel = "Delivered successfully";
+  } else if (replayItem) {
+    bannerTone = "amber";
+    bannerLabel = `Queued for replay (${replayItem.status})`;
+  } else if (lastDelivery) {
+    bannerTone = "red";
+    bannerLabel = `Delivery failed${lastDelivery.errorType ? ` · ${lastDelivery.errorType}` : ""}`;
+  }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-4 fade-up">
-        <Link
-          href="/events"
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-all"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-[var(--text-primary)] font-mono">
-            {event.eventType}
-          </h1>
-          <p className="text-[var(--text-tertiary)] text-[13px] mt-0.5">
+    <>
+      <DashTopbar
+        title={
+          <span className="flex items-center" style={{ gap: 10 }}>
+            <Link
+              href="/events"
+              style={{
+                color: "var(--hw-ink-4)",
+                fontWeight: 500,
+                fontSize: 14,
+              }}
+            >
+              Events /
+            </Link>
+            <span className="hw-mono">{event.eventType}</span>
+          </span>
+        }
+        subtitle={
+          <span className="flex items-center" style={{ gap: 8 }}>
+            <ProviderMark provider={integration.provider} size={14} />
             <Link
               href={`/integrations/${integration.id}`}
-              className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+              style={{
+                color: "var(--hw-ink-3)",
+                fontSize: 12,
+              }}
             >
               {integration.name}
             </Link>
-            <span className="mx-2 text-[var(--text-ghost)]">|</span>
-            <span className="capitalize">{integration.provider}</span>
-            <span className="mx-2 text-[var(--text-ghost)]">|</span>
-            {new Date(event.receivedAt).toLocaleString()}
-          </p>
-        </div>
-      </div>
+            <span style={{ color: "var(--hw-ink-5)" }}>·</span>
+            <span
+              className="hw-mono"
+              style={{ fontSize: 12, color: "var(--hw-ink-3)" }}
+            >
+              {new Date(event.receivedAt).toLocaleString()}
+            </span>
+          </span>
+        }
+        right={!hasSuccessfulDelivery && <ReplayButton eventId={eventId} />}
+      />
 
-      {/* Status Banner */}
       <div
-        className={`rounded-xl border p-4 flex items-center gap-3 ${statusConfig.bg} fade-up fade-up-1`}
+        className="hw-scroll flex flex-col"
+        style={{
+          padding: "24px 28px 40px",
+          gap: 20,
+          overflow: "auto",
+          flex: 1,
+        }}
       >
-        <div className={`${statusConfig.color} ${statusConfig.glow}`}>
-          {statusConfig.icon}
-        </div>
-        <span className={`${statusConfig.color} font-medium text-[13px]`}>
-          {statusConfig.label}
-        </span>
-        {!hasSuccessfulDelivery && (
-          <div className="ml-auto">
-            <ReplayButton eventId={eventId} />
+        {/* Status banner */}
+        <section className="hw-fade-up">
+          <div
+            className="hw-panel flex items-center"
+            style={{
+              padding: "14px 20px",
+              gap: 12,
+              borderColor:
+                bannerTone === "green"
+                  ? "rgba(74,222,128,0.22)"
+                  : bannerTone === "red"
+                    ? "rgba(248,113,113,0.22)"
+                    : bannerTone === "amber"
+                      ? "rgba(251,191,36,0.22)"
+                      : "var(--hw-line)",
+              background:
+                bannerTone === "green"
+                  ? "rgba(74,222,128,0.05)"
+                  : bannerTone === "red"
+                    ? "rgba(248,113,113,0.05)"
+                    : bannerTone === "amber"
+                      ? "rgba(251,191,36,0.05)"
+                      : "var(--hw-bg-2)",
+            }}
+          >
+            <Dot tone={bannerTone} />
+            <span
+              className="hw-mono"
+              style={{
+                fontSize: 12,
+                color:
+                  bannerTone === "indigo"
+                    ? "var(--hw-indigo-ink)"
+                    : `var(--hw-${bannerTone})`,
+                letterSpacing: "0.04em",
+              }}
+            >
+              {bannerLabel}
+            </span>
           </div>
-        )}
-      </div>
+        </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column */}
-        <div className="space-y-6">
-          {/* Event Details */}
-          <div className="glass rounded-xl p-6 fade-up fade-up-2">
-            <div className="flex items-center gap-2 mb-4">
-              <Zap className="h-4 w-4 text-indigo-400" />
-              <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">
-                Event Details
-              </h2>
-            </div>
-            <dl className="space-y-3">
-              <DetailRow label="ID" value={event.id} mono />
-              <DetailRow
-                label="Provider Event ID"
-                value={event.providerEventId ?? "--"}
-                mono
-              />
-              <DetailRow label="Source" value={event.source} />
-              <DetailRow
-                label="Attempts"
-                value={String(eventDeliveries.length)}
-              />
-              <div className="flex items-center justify-between py-1">
-                <dt className="text-[var(--text-tertiary)] text-[13px]">Signature</dt>
-                <dd>
+        <section
+          className="hw-fade-up hw-fade-up-1 grid"
+          style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}
+        >
+          {/* Left column */}
+          <div className="flex flex-col" style={{ gap: 16 }}>
+            <div
+              className="hw-panel"
+              style={{ padding: 22, background: "var(--hw-bg-2)" }}
+            >
+              <SectionHeader title="Event details" />
+              <div
+                className="grid"
+                style={{
+                  marginTop: 16,
+                  gridTemplateColumns: "140px 1fr",
+                  gap: "10px 16px",
+                  alignItems: "baseline",
+                }}
+              >
+                <Detail label="ID" value={event.id} mono />
+                <Detail
+                  label="Provider event ID"
+                  value={event.providerEventId ?? "—"}
+                  mono
+                />
+                <Detail label="Source" value={event.source} />
+                <Detail
+                  label="Attempts"
+                  value={String(eventDeliveries.length)}
+                />
+                <div className="hw-label">Signature</div>
+                <div>
                   {event.signatureValid ? (
-                    <span className="inline-flex items-center gap-1 text-emerald-400 text-[12px]">
-                      <CheckCircle className="h-3 w-3" />
-                      Valid
-                    </span>
+                    <Chip tone="green">
+                      <Icon name="check" size={10} /> valid
+                    </Chip>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-red-400/70 text-[12px]">
-                      <XCircle className="h-3 w-3" />
-                      Invalid
-                    </span>
+                    <Chip tone="red">
+                      <Icon name="x" size={10} /> invalid
+                    </Chip>
                   )}
-                </dd>
+                </div>
               </div>
-            </dl>
+            </div>
+
+            <div
+              className="hw-panel overflow-hidden"
+              style={{ background: "var(--hw-bg-2)" }}
+            >
+              <div
+                style={{
+                  padding: "14px 20px",
+                  borderBottom: "1px solid var(--hw-line)",
+                }}
+              >
+                <SectionHeader title="Payload" />
+              </div>
+              <pre
+                className="hw-mono hw-scroll"
+                style={{
+                  margin: 0,
+                  padding: 18,
+                  background: "var(--hw-bg-3)",
+                  fontSize: 11.5,
+                  lineHeight: 1.65,
+                  color: "var(--hw-ink-3)",
+                  overflow: "auto",
+                  maxHeight: 460,
+                }}
+              >
+                {JSON.stringify(event.payload, null, 2)}
+              </pre>
+            </div>
           </div>
 
-          {/* Payload */}
-          <div className="glass rounded-xl p-6 fade-up fade-up-3">
-            <h2 className="text-[15px] font-semibold text-[var(--text-primary)] mb-4">
-              Payload
-            </h2>
-            <pre className="json-viewer text-[12px] text-[var(--text-secondary)] overflow-auto max-h-[420px] p-4 font-mono leading-relaxed">
-              {JSON.stringify(event.payload, null, 2)}
-            </pre>
-          </div>
-        </div>
+          {/* Right column: timeline */}
+          <div
+            className="hw-panel"
+            style={{ padding: 22, background: "var(--hw-bg-2)" }}
+          >
+            <div
+              className="flex items-center justify-between"
+              style={{ marginBottom: 18 }}
+            >
+              <SectionHeader title="Delivery timeline" />
+              {eventDeliveries.length > 0 && (
+                <span
+                  className="hw-mono"
+                  style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+                >
+                  {eventDeliveries.length} attempt
+                  {eventDeliveries.length !== 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
 
-        {/* Delivery Timeline */}
-        <div className="glass rounded-xl p-6 fade-up fade-up-3">
-          <div className="flex items-center gap-2 mb-5">
-            <Send className="h-4 w-4 text-indigo-400" />
-            <h2 className="text-[15px] font-semibold text-[var(--text-primary)]">
-              Delivery Timeline
-            </h2>
-            {eventDeliveries.length > 0 && (
-              <span className="text-[11px] text-[var(--text-faint)] ml-auto tabular-nums">
-                {eventDeliveries.length} attempt
-                {eventDeliveries.length !== 1 ? "s" : ""}
-              </span>
+            {eventDeliveries.length === 0 ? (
+              <div
+                style={{
+                  padding: "32px 16px",
+                  textAlign: "center",
+                  color: "var(--hw-ink-4)",
+                  fontSize: 12.5,
+                }}
+              >
+                No delivery attempts yet.
+              </div>
+            ) : (
+              <div className="flex flex-col" style={{ gap: 0 }}>
+                {eventDeliveries.map((delivery, i) => {
+                  const isSuccess = delivery.status === "delivered";
+                  const isFailed = delivery.status === "failed";
+                  const tone: Tone = isSuccess
+                    ? "green"
+                    : isFailed
+                      ? "red"
+                      : "amber";
+                  return (
+                    <div
+                      key={delivery.id}
+                      className="flex"
+                      style={{ gap: 14 }}
+                    >
+                      <div className="flex flex-col items-center">
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: 999,
+                            background: `var(--hw-${tone})`,
+                            boxShadow: `0 0 8px var(--hw-${tone})`,
+                            marginTop: 6,
+                          }}
+                        />
+                        {i < eventDeliveries.length - 1 && (
+                          <div
+                            style={{
+                              width: 1,
+                              flex: 1,
+                              background: "var(--hw-line-2)",
+                              margin: "4px 0",
+                            }}
+                          />
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          paddingBottom: 18,
+                        }}
+                      >
+                        <div
+                          className="flex items-center flex-wrap"
+                          style={{ gap: 8 }}
+                        >
+                          <span
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 500,
+                              color: `var(--hw-${tone})`,
+                            }}
+                          >
+                            Attempt #{delivery.attemptNumber}
+                          </span>
+                          {delivery.statusCode && (
+                            <Chip>
+                              {String(delivery.statusCode)}
+                            </Chip>
+                          )}
+                          {delivery.errorType && (
+                            <Chip tone="red">{delivery.errorType}</Chip>
+                          )}
+                        </div>
+                        <div
+                          className="flex items-center"
+                          style={{ gap: 12, marginTop: 4 }}
+                        >
+                          <span
+                            className="hw-mono"
+                            style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+                          >
+                            {new Date(delivery.attemptedAt).toLocaleString()}
+                          </span>
+                          {delivery.responseTimeMs !== null && (
+                            <span
+                              className="hw-mono hw-num"
+                              style={{
+                                fontSize: 11,
+                                color: "var(--hw-ink-4)",
+                              }}
+                            >
+                              {delivery.responseTimeMs}ms
+                            </span>
+                          )}
+                        </div>
+                        {delivery.responseBody && (
+                          <pre
+                            className="hw-mono"
+                            style={{
+                              marginTop: 8,
+                              padding: 10,
+                              background: "var(--hw-bg-3)",
+                              border: "1px solid var(--hw-line)",
+                              borderRadius: 6,
+                              fontSize: 11,
+                              color: "var(--hw-ink-3)",
+                              maxHeight: 80,
+                              overflow: "auto",
+                            }}
+                          >
+                            {delivery.responseBody}
+                          </pre>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
-          {eventDeliveries.length === 0 ? (
-            <div className="py-12 text-center">
-              <Clock className="mx-auto h-8 w-8 text-[var(--text-ghost)] mb-3" />
-              <p className="text-[var(--text-muted)] text-sm">
-                No delivery attempts yet.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-0">
-              {eventDeliveries.map((delivery, i) => {
-                const isSuccess = delivery.status === "delivered";
-                const isFailed = delivery.status === "failed";
-                const dotColor = isSuccess
-                  ? "bg-emerald-400 glow-green"
-                  : isFailed
-                  ? "bg-red-400 glow-red"
-                  : "bg-amber-400 glow-amber";
-                const textColor = isSuccess
-                  ? "text-emerald-400"
-                  : isFailed
-                  ? "text-red-400"
-                  : "text-amber-400";
-
-                return (
-                  <div key={delivery.id} className="relative flex gap-4">
-                    {/* Timeline line */}
-                    <div className="flex flex-col items-center">
-                      <div
-                        className={`w-2.5 h-2.5 rounded-full ${dotColor} mt-1.5 shrink-0 z-10`}
-                      />
-                      {i < eventDeliveries.length - 1 && (
-                        <div className="w-px flex-1 bg-[var(--bg-surface-hover)] my-1" />
-                      )}
-                    </div>
-                    {/* Content */}
-                    <div className="pb-5 flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className={`${textColor} font-medium text-[13px]`}
-                        >
-                          Attempt #{delivery.attemptNumber}
-                        </span>
-                        {delivery.statusCode && (
-                          <span className="font-mono text-[11px] text-[var(--text-muted)] bg-[var(--bg-surface)] px-1.5 py-0.5 rounded">
-                            {delivery.statusCode}
-                          </span>
-                        )}
-                        {delivery.errorType && (
-                          <span className="text-[11px] text-[var(--text-muted)] bg-red-500/5 border border-red-500/10 px-1.5 py-0.5 rounded">
-                            {delivery.errorType}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-3 mt-1 text-[11px] text-[var(--text-faint)]">
-                        <span>
-                          {new Date(delivery.attemptedAt).toLocaleString()}
-                        </span>
-                        {delivery.responseTimeMs !== null && (
-                          <span className="tabular-nums">
-                            {delivery.responseTimeMs}ms
-                          </span>
-                        )}
-                      </div>
-                      {delivery.responseBody && (
-                        <pre className="mt-2 json-viewer text-[11px] text-[var(--text-tertiary)] p-2.5 overflow-auto max-h-20 font-mono">
-                          {delivery.responseBody}
-                        </pre>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+        </section>
       </div>
-    </div>
+    </>
   );
 }
 
-function DetailRow({
+function Detail({
   label,
   value,
   mono,
@@ -300,13 +407,18 @@ function DetailRow({
   mono?: boolean;
 }) {
   return (
-    <div className="flex items-center justify-between py-1">
-      <dt className="text-[var(--text-tertiary)] text-[13px]">{label}</dt>
-      <dd
-        className={`text-[var(--text-secondary)] text-[12px] ${mono ? "font-mono" : ""} max-w-[60%] truncate`}
+    <>
+      <div className="hw-label">{label}</div>
+      <div
+        className={mono ? "hw-mono" : ""}
+        style={{
+          fontSize: 12.5,
+          color: "var(--hw-ink-2)",
+          wordBreak: "break-all",
+        }}
       >
         {value}
-      </dd>
-    </div>
+      </div>
+    </>
   );
 }

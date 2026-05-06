@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { AuthShell, AuthField, AuthError, Icon } from "@/components/hw";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -19,79 +20,120 @@ export default function ForgotPasswordPage() {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
     });
-
     if (error) {
       setError(error.message);
       setLoading(false);
       return;
     }
-
     setSuccess(true);
     setLoading(false);
   }
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
-        <div className="text-center space-y-4 px-4">
-          <h2 className="text-2xl font-bold text-[var(--text-primary)]">Check your email</h2>
-          <p className="text-[var(--text-tertiary)]">
-            We sent a password reset link to <strong className="text-[var(--text-primary)]">{email}</strong>.
-          </p>
-          <Link href="/login" className="text-indigo-400 hover:text-indigo-300 text-sm">
-            Back to login
+      <AuthShell kicker="CHECK YOUR EMAIL" title="Reset link sent.">
+        <div style={{ textAlign: "center" }}>
+          <Icon
+            name="check"
+            size={28}
+            color="var(--hw-green)"
+            style={{ display: "inline-block" }}
+          />
+          <div
+            style={{
+              marginTop: 14,
+              fontSize: 13,
+              color: "var(--hw-ink-2)",
+              lineHeight: 1.6,
+            }}
+          >
+            We sent a password reset link to{" "}
+            <span className="hw-mono" style={{ color: "var(--hw-ink)" }}>
+              {email}
+            </span>
+            .
+          </div>
+          <Link
+            href="/login"
+            className="hw-mono"
+            style={{
+              marginTop: 18,
+              display: "inline-block",
+              fontSize: 12,
+              color: "var(--hw-indigo-ink)",
+            }}
+          >
+            ← Back to login
           </Link>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
-      <div className="w-full max-w-md space-y-8 px-4">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">HookWise</h1>
-          <p className="mt-2 text-[var(--text-tertiary)]">Reset your password</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-lg bg-red-900/30 border border-red-800 px-4 py-3 text-sm text-red-400">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? "Sending..." : "Send reset link"}
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-[var(--text-tertiary)]">
-          Remember your password?{" "}
-          <Link href="/login" className="text-indigo-400 hover:text-indigo-300">
+    <AuthShell
+      kicker="RESET PASSWORD"
+      title="Forgot it?"
+      subtitle="Enter your email and we'll send a reset link."
+      footer={
+        <>
+          Remember it?{" "}
+          <Link href="/login" style={{ color: "var(--hw-indigo-ink)" }}>
             Sign in
           </Link>
-        </p>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        {error && <AuthError message={error} />}
+
+        <AuthField label="Email" htmlFor="email">
+          <input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="hw-input hw-mono"
+            placeholder="you@example.com"
+          />
+        </AuthField>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="hw-btn hw-btn-primary"
+          style={{
+            width: "100%",
+            justifyContent: "center",
+            padding: "12px 16px",
+            opacity: loading ? 0.6 : 1,
+            marginTop: 4,
+          }}
+        >
+          {loading ? "Sending…" : "Send reset link"}
+        </button>
+      </form>
+      <style jsx>{`
+        :global(.hw-input) {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 8px;
+          background: var(--hw-bg-3);
+          border: 1px solid var(--hw-line-2);
+          color: var(--hw-ink);
+          font-size: 13px;
+          transition: all 150ms;
+        }
+        :global(.hw-input:focus) {
+          outline: none;
+          border-color: rgba(129, 140, 248, 0.4);
+          box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.08);
+        }
+        :global(.hw-input::placeholder) {
+          color: var(--hw-ink-5);
+        }
+      `}</style>
+    </AuthShell>
   );
 }

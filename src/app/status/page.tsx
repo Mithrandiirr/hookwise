@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { providerHealth, benchmarks } from "@/lib/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { providerHealth, benchmarks, anomalies, integrations } from "@/lib/db/schema";
+import { desc, eq, gte, and, count, sql } from "drizzle-orm";
 import { StatusClient } from "./status-client";
 import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
@@ -34,6 +34,13 @@ export type StatusProviderData = {
   updatedAt: string | null;
 };
 
+export type IncidentEntry = {
+  time: string;
+  provider: string;
+  status: ProviderStatus;
+  failureRate: number;
+};
+
 export type StatusData = {
   overallStatus: ProviderStatus;
   providers: Record<string, StatusProviderData>;
@@ -45,6 +52,12 @@ export type StatusData = {
     failureRate: number;
     sampleSize: number;
   }>;
+  incidents: IncidentEntry[];
+  networkStats: {
+    totalProviders: number;
+    totalEventsProcessed: number;
+    uptimePercent: number;
+  };
   generatedAt: string;
 };
 
@@ -93,6 +106,42 @@ async function getStatusData(): Promise<StatusData> {
   if (statuses.includes("outage")) overallStatus = "outage";
   else if (statuses.includes("degraded")) overallStatus = "degraded";
 
+  // Build incident timeline from health snapshots with elevated failure rates
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const healthHistory = await db
+    .select()
+    .from(providerHealth)
+    .where(
+      and(
+        eq(providerHealth.metricName, "failure_rate"),
+        gte(providerHealth.measuredAt, twentyFourHoursAgo)
+      )
+    )
+    .orderBy(desc(providerHealth.measuredAt))
+    .limit(200);
+
+  const incidents: IncidentEntry[] = healthHistory
+    .filter((h) => h.value >= 10)
+    .map((h) => ({
+      time: h.measuredAt.toISOString(),
+      provider: h.provider,
+      status: getStatus(h.value),
+      failureRate: h.value,
+    }));
+
+  // Network stats
+  const [totalEvents] = await db
+    .select({ count: count() })
+    .from(
+      db.select({ id: sql`1` }).from(providerHealth).as("ph")
+    );
+
+  const allFailureRates = healthHistory.map((h) => h.value);
+  const avgFailureRate =
+    allFailureRates.length > 0
+      ? allFailureRates.reduce((s, v) => s + v, 0) / allFailureRates.length
+      : 0;
+
   return {
     overallStatus,
     providers: result,
@@ -104,6 +153,12 @@ async function getStatusData(): Promise<StatusData> {
       failureRate: b.failureRate,
       sampleSize: b.sampleSize,
     })),
+    incidents,
+    networkStats: {
+      totalProviders: providers.length,
+      totalEventsProcessed: totalEvents?.count ?? 0,
+      uptimePercent: Math.round((100 - avgFailureRate) * 100) / 100,
+    },
     generatedAt: new Date().toISOString(),
   };
 }

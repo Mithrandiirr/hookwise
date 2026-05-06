@@ -1,19 +1,12 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db, flows, flowInstances, integrations } from "@/lib/db";
 import { eq, and, desc } from "drizzle-orm";
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import {
-  ArrowLeft,
-  CheckCircle,
-  Clock,
-  XCircle,
-  AlertTriangle,
-} from "lucide-react";
-import { FlowDiagram } from "@/components/dashboard/flow-diagram";
 import type { FlowInstanceStatus } from "@/types";
+import { Chip, Icon, DashTopbar, SectionHeader } from "@/components/hw";
 
 interface FlowStep {
   integrationId: string;
@@ -31,7 +24,6 @@ export default async function FlowDetailPage({
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
   if (!user) notFound();
 
   const [flow] = await db
@@ -39,28 +31,28 @@ export default async function FlowDetailPage({
     .from(flows)
     .where(and(eq(flows.id, flowId), eq(flows.userId, user.id)))
     .limit(1);
-
   if (!flow) notFound();
 
   const steps = flow.steps as FlowStep[];
-
-  // Fetch integration names for the diagram
   const integrationIds = [...new Set(steps.map((s) => s.integrationId))];
   const integrationRows = await Promise.all(
     integrationIds.map(async (id) => {
       const [row] = await db
-        .select({ id: integrations.id, name: integrations.name })
+        .select({
+          id: integrations.id,
+          name: integrations.name,
+          provider: integrations.provider,
+        })
         .from(integrations)
         .where(eq(integrations.id, id))
         .limit(1);
       return row;
-    })
+    }),
   );
-  const integrationNames = Object.fromEntries(
-    integrationRows.filter(Boolean).map((r) => [r!.id, r!.name])
+  const integrationMap = new Map(
+    integrationRows.filter(Boolean).map((r) => [r!.id, r!] as const),
   );
 
-  // Fetch flow instances
   const instances = await db
     .select()
     .from(flowInstances)
@@ -69,157 +61,217 @@ export default async function FlowDetailPage({
     .limit(50);
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-4 fade-up">
-        <Link
-          href="/flows"
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-all"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
-            {flow.name}
-          </h1>
-          <p className="text-[var(--text-tertiary)] text-[13px] mt-0.5">
-            {steps.length} steps &middot; Timeout: {flow.timeoutMinutes} minutes
-          </p>
-        </div>
-      </div>
-
-      {/* Flow Diagram */}
-      <div className="glass rounded-xl p-5 fade-up fade-up-1">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] mb-3">
-          Flow Definition
-        </h2>
-        <FlowDiagram
-          steps={steps}
-          integrationNames={integrationNames}
-          completedSteps={steps.length}
-          status="completed"
-        />
-      </div>
-
-      {/* Instances */}
-      <div className="fade-up fade-up-2">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-1 h-4 rounded-full bg-indigo-500" />
-          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-            Instances
-          </h2>
-          <span className="text-[11px] text-[var(--text-faint)] ml-auto">
-            {instances.length} instances
+    <>
+      <DashTopbar
+        title={
+          <span className="flex items-center" style={{ gap: 10 }}>
+            <Link
+              href="/flows"
+              style={{
+                color: "var(--hw-ink-4)",
+                fontWeight: 500,
+                fontSize: 14,
+              }}
+            >
+              Flows /
+            </Link>
+            <span>{flow.name}</span>
           </span>
-        </div>
+        }
+        subtitle={
+          <span className="hw-mono" style={{ fontSize: 12, color: "var(--hw-ink-3)" }}>
+            {steps.length} steps · timeout {flow.timeoutMinutes} min
+          </span>
+        }
+      />
 
-        {instances.length === 0 ? (
-          <div className="glass rounded-xl p-16 text-center">
-            <Clock className="mx-auto h-8 w-8 text-[var(--text-ghost)] mb-3" />
-            <p className="text-[var(--text-tertiary)] text-sm">No instances yet</p>
-            <p className="text-[var(--text-ghost)] text-[12px] mt-1">
-              Instances will appear once matching events are received.
-            </p>
-          </div>
-        ) : (
-          <div className="glass rounded-xl overflow-hidden">
-            <table className="w-full text-[13px]">
-              <thead>
-                <tr className="border-b border-[var(--border-default)]">
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Status
-                  </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Correlation Key
-                  </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Started
-                  </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Completed
-                  </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Duration
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {instances.map((instance) => (
-                  <tr
-                    key={instance.id}
-                    className="border-b border-[var(--border-subtle)] last:border-0 table-row-hover"
+      <div
+        className="hw-scroll flex flex-col"
+        style={{
+          padding: "24px 28px 40px",
+          gap: 20,
+          overflow: "auto",
+          flex: 1,
+        }}
+      >
+        {/* Flow definition */}
+        <section className="hw-fade-up">
+          <div
+            className="hw-panel"
+            style={{ padding: 22, background: "var(--hw-bg-2)" }}
+          >
+            <SectionHeader title="Flow definition" />
+            <div
+              className="flex items-center flex-wrap"
+              style={{ gap: 8, marginTop: 14 }}
+            >
+              {steps.map((s, i) => {
+                const integ = integrationMap.get(s.integrationId);
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center"
+                    style={{ gap: 8 }}
                   >
-                    <td className="px-5 py-3.5">
-                      <InstanceStatusBadge
-                        status={instance.status as FlowInstanceStatus}
+                    <div
+                      className="hw-panel flex items-center"
+                      style={{
+                        padding: "8px 12px",
+                        background: "var(--hw-bg-3)",
+                        gap: 8,
+                      }}
+                    >
+                      <span
+                        className="hw-mono"
+                        style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+                      >
+                        {i + 1}
+                      </span>
+                      <span
+                        className="hw-mono"
+                        style={{ fontSize: 12, color: "var(--hw-indigo-ink)" }}
+                      >
+                        {s.eventType}
+                      </span>
+                      {integ && (
+                        <span
+                          className="hw-mono"
+                          style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+                        >
+                          · {integ.name}
+                        </span>
+                      )}
+                      <span
+                        className="hw-mono"
+                        style={{ fontSize: 11, color: "var(--hw-ink-5)" }}
+                      >
+                        ({s.correlationField})
+                      </span>
+                    </div>
+                    {i < steps.length - 1 && (
+                      <Icon
+                        name="chevron-right"
+                        size={13}
+                        color="var(--hw-ink-5)"
                       />
-                    </td>
-                    <td className="px-5 py-3.5 font-mono text-[12px] text-[var(--text-tertiary)]">
-                      {instance.correlationKey}
-                    </td>
-                    <td className="px-5 py-3.5 text-[var(--text-muted)] text-[12px] tabular-nums">
-                      {formatTime(instance.startedAt)}
-                    </td>
-                    <td className="px-5 py-3.5 text-[var(--text-muted)] text-[12px] tabular-nums">
-                      {instance.completedAt
-                        ? formatTime(instance.completedAt)
-                        : "--"}
-                    </td>
-                    <td className="px-5 py-3.5 text-[var(--text-muted)] text-[12px] tabular-nums">
-                      {instance.completedAt
-                        ? formatDuration(instance.startedAt, instance.completedAt)
-                        : instance.status === "running"
-                          ? formatDuration(instance.startedAt, new Date())
-                          : "--"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        )}
+        </section>
+
+        {/* Instances */}
+        <section className="hw-fade-up hw-fade-up-1">
+          <div
+            className="hw-panel overflow-hidden"
+            style={{ background: "var(--hw-bg-2)" }}
+          >
+            <div
+              className="flex items-center justify-between"
+              style={{
+                padding: "14px 20px",
+                borderBottom: "1px solid var(--hw-line)",
+              }}
+            >
+              <SectionHeader title="Instances" />
+              <span
+                className="hw-mono"
+                style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+              >
+                {instances.length} instances
+              </span>
+            </div>
+
+            {instances.length === 0 ? (
+              <div
+                style={{
+                  padding: "48px 24px",
+                  textAlign: "center",
+                  fontSize: 12.5,
+                  color: "var(--hw-ink-4)",
+                }}
+              >
+                No instances yet. They appear once matching events are received.
+              </div>
+            ) : (
+              <table className="hw-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Correlation key</th>
+                    <th>Started</th>
+                    <th>Completed</th>
+                    <th style={{ textAlign: "right" }}>Duration</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {instances.map((instance) => (
+                    <tr key={instance.id}>
+                      <td>
+                        <InstanceStatus
+                          status={instance.status as FlowInstanceStatus}
+                        />
+                      </td>
+                      <td
+                        className="hw-mono"
+                        style={{ fontSize: 12, color: "var(--hw-ink-3)" }}
+                      >
+                        {instance.correlationKey}
+                      </td>
+                      <td
+                        className="hw-mono hw-num"
+                        style={{ fontSize: 11.5, color: "var(--hw-ink-4)" }}
+                      >
+                        {formatTime(instance.startedAt)}
+                      </td>
+                      <td
+                        className="hw-mono hw-num"
+                        style={{ fontSize: 11.5, color: "var(--hw-ink-4)" }}
+                      >
+                        {instance.completedAt
+                          ? formatTime(instance.completedAt)
+                          : "—"}
+                      </td>
+                      <td
+                        className="hw-mono hw-num"
+                        style={{
+                          textAlign: "right",
+                          fontSize: 12,
+                          color: "var(--hw-ink-2)",
+                        }}
+                      >
+                        {instance.completedAt
+                          ? formatDuration(instance.startedAt, instance.completedAt)
+                          : instance.status === "running"
+                            ? formatDuration(instance.startedAt, new Date())
+                            : "—"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
       </div>
-    </div>
+    </>
   );
 }
 
-function InstanceStatusBadge({ status }: { status: FlowInstanceStatus }) {
-  const config: Record<
+function InstanceStatus({ status }: { status: FlowInstanceStatus }) {
+  const map: Record<
     FlowInstanceStatus,
-    { icon: React.ReactNode; label: string; classes: string }
+    { tone: "green" | "amber" | "red" | "indigo"; label: string }
   > = {
-    running: {
-      icon: <Clock className="h-3 w-3" />,
-      label: "Running",
-      classes: "text-indigo-400 bg-indigo-500/10",
-    },
-    completed: {
-      icon: <CheckCircle className="h-3 w-3" />,
-      label: "Completed",
-      classes: "text-emerald-400 bg-emerald-500/10",
-    },
-    failed: {
-      icon: <XCircle className="h-3 w-3" />,
-      label: "Failed",
-      classes: "text-red-400 bg-red-500/10",
-    },
-    timed_out: {
-      icon: <AlertTriangle className="h-3 w-3" />,
-      label: "Timed out",
-      classes: "text-amber-400 bg-amber-500/10",
-    },
+    running: { tone: "indigo", label: "running" },
+    completed: { tone: "green", label: "completed" },
+    failed: { tone: "red", label: "failed" },
+    timed_out: { tone: "amber", label: "timed out" },
   };
-
-  const { icon, label, classes } = config[status] ?? config.running;
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-medium ${classes}`}
-    >
-      {icon}
-      {label}
-    </span>
-  );
+  const c = map[status] ?? map.running;
+  return <Chip tone={c.tone}>{c.label}</Chip>;
 }
 
 function formatTime(date: Date) {

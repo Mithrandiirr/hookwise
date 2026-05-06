@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { createClient } from "@/lib/supabase/server";
 import { db, integrations } from "@/lib/db";
 import { eq } from "drizzle-orm";
+import { DashTopbar } from "@/components/hw";
 import { ScannerClient } from "./scanner-client";
 
 export default async function ScanPage() {
@@ -23,18 +24,22 @@ export default async function ScanPage() {
     : [];
 
   return (
-    <div className="space-y-8">
-      <div className="fade-up">
-        <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
-          Health Scanner
-        </h1>
-        <p className="text-[var(--text-tertiary)] mt-1 text-[15px]">
-          Scan your provider API to find missed webhooks and calculate dollar
-          impact
-        </p>
+    <>
+      <DashTopbar
+        title="Health scanner"
+        subtitle="diff your provider API against ingest log; surface the gap in dollars"
+      />
+      <div
+        className="hw-scroll flex flex-col"
+        style={{
+          padding: "24px 28px 40px",
+          gap: 20,
+          overflow: "auto",
+          flex: 1,
+        }}
+      >
+        <ScannerClient integrations={userIntegrations} />
       </div>
-
-      <ScannerClient integrations={userIntegrations} />
-    </div>
+    </>
   );
 }

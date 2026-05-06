@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AuthShell, AuthField, AuthError } from "@/components/hw";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -13,84 +14,93 @@ export default function ResetPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
-
     setLoading(true);
-
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
     const { error } = await supabase.auth.updateUser({ password });
-
     if (error) {
       setError(error.message);
       setLoading(false);
       return;
     }
-
     router.push("/dashboard");
     router.refresh();
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
-      <div className="w-full max-w-md space-y-8 px-4">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">HookWise</h1>
-          <p className="mt-2 text-[var(--text-tertiary)]">Set a new password</p>
-        </div>
+    <AuthShell
+      kicker="NEW PASSWORD"
+      title="Set a new password."
+      subtitle="Use something memorable but not guessable."
+    >
+      <form onSubmit={handleSubmit}>
+        {error && <AuthError message={error} />}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-lg bg-red-900/30 border border-red-800 px-4 py-3 text-sm text-red-400">
-              {error}
-            </div>
-          )}
+        <AuthField label="New password" htmlFor="password">
+          <input
+            id="password"
+            type="password"
+            required
+            minLength={8}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="hw-input hw-mono"
+            placeholder="min. 8 characters"
+          />
+        </AuthField>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              New password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              minLength={8}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="Min. 8 characters"
-            />
-          </div>
+        <AuthField label="Confirm password" htmlFor="confirm">
+          <input
+            id="confirm"
+            type="password"
+            required
+            minLength={8}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="hw-input hw-mono"
+            placeholder="repeat password"
+          />
+        </AuthField>
 
-          <div>
-            <label htmlFor="confirm" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              Confirm password
-            </label>
-            <input
-              id="confirm"
-              type="password"
-              required
-              minLength={8}
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="Repeat password"
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? "Updating..." : "Update password"}
-          </button>
-        </form>
-      </div>
-    </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="hw-btn hw-btn-primary"
+          style={{
+            width: "100%",
+            justifyContent: "center",
+            padding: "12px 16px",
+            opacity: loading ? 0.6 : 1,
+            marginTop: 4,
+          }}
+        >
+          {loading ? "Updating…" : "Update password"}
+        </button>
+      </form>
+      <style jsx>{`
+        :global(.hw-input) {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 8px;
+          background: var(--hw-bg-3);
+          border: 1px solid var(--hw-line-2);
+          color: var(--hw-ink);
+          font-size: 13px;
+          transition: all 150ms;
+        }
+        :global(.hw-input:focus) {
+          outline: none;
+          border-color: rgba(129, 140, 248, 0.4);
+          box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.08);
+        }
+        :global(.hw-input::placeholder) {
+          color: var(--hw-ink-5);
+        }
+      `}</style>
+    </AuthShell>
   );
 }

@@ -1,9 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ShieldCheck, ShieldAlert, Scan, AlertTriangle, CheckCircle2 } from "lucide-react";
-import { SeverityBadge } from "@/components/dashboard/severity-badge";
-import type { AnomalySeverity } from "@/types";
+import { Chip, Dot, Icon, DashTopbar, SectionHeader } from "@/components/hw";
 
 interface ScanData {
   id: string;
@@ -40,7 +38,23 @@ interface ScanDetail {
   findings_detail?: ScanFinding[];
 }
 
-export function SecurityClient({ endpoints }: { endpoints: EndpointWithScan[] }) {
+function scoreTone(score: number): "green" | "amber" | "red" {
+  if (score >= 80) return "green";
+  if (score >= 50) return "amber";
+  return "red";
+}
+
+function severityChipTone(s: string): "red" | "amber" | "indigo" {
+  if (s === "critical" || s === "high") return "red";
+  if (s === "medium") return "amber";
+  return "indigo";
+}
+
+export function SecurityClient({
+  endpoints,
+}: {
+  endpoints: EndpointWithScan[];
+}) {
   const [scanning, setScanning] = useState<Record<string, boolean>>({});
   const [selectedScan, setSelectedScan] = useState<ScanDetail | null>(null);
 
@@ -50,12 +64,12 @@ export function SecurityClient({ endpoints }: { endpoints: EndpointWithScan[] })
     scannedEndpoints > 0
       ? Math.round(
           endpoints.reduce((sum, e) => sum + (e.latestScan?.score ?? 0), 0) /
-            scannedEndpoints
+            scannedEndpoints,
         )
       : 0;
   const totalVulnerabilities = endpoints.reduce(
-    (sum, e) => sum + (e.latestScan?.findings as Array<unknown> ?? []).length,
-    0
+    (sum, e) => sum + ((e.latestScan?.findings as Array<unknown>) ?? []).length,
+    0,
   );
 
   async function handleScan(endpointId: string) {
@@ -66,8 +80,6 @@ export function SecurityClient({ endpoints }: { endpoints: EndpointWithScan[] })
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ endpointId }),
       });
-
-      // Poll for results
       let attempts = 0;
       const poll = setInterval(async () => {
         attempts++;
@@ -76,7 +88,6 @@ export function SecurityClient({ endpoints }: { endpoints: EndpointWithScan[] })
           setScanning((prev) => ({ ...prev, [endpointId]: false }));
           return;
         }
-
         const res = await fetch("/api/security/scans");
         const scans: ScanData[] = await res.json();
         const latest = scans.find((s) => s.endpointId === endpointId);
@@ -99,233 +110,327 @@ export function SecurityClient({ endpoints }: { endpoints: EndpointWithScan[] })
     }
   }
 
-  function scoreColor(score: number): string {
-    if (score >= 80) return "text-emerald-400";
-    if (score >= 50) return "text-amber-400";
-    return "text-red-400";
-  }
-
-  function scoreGlow(score: number): string {
-    if (score >= 80) return "shadow-[0_0_20px_rgba(52,211,153,0.2)]";
-    if (score >= 50) return "shadow-[0_0_20px_rgba(251,191,36,0.2)]";
-    return "shadow-[0_0_20px_rgba(248,113,113,0.2)]";
-  }
-
   return (
-    <div className="space-y-8">
-      <div className="fade-up">
-        <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
-          Security Scanner
-        </h1>
-        <p className="text-[var(--text-tertiary)] mt-1 text-[15px]">
-          Automated security audit of your webhook endpoints
-        </p>
-      </div>
-
-      {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 fade-up fade-up-1">
-        <div className="glass rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <ShieldCheck className="h-4 w-4 text-indigo-400" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              Endpoints
+    <>
+      <DashTopbar
+        title="Security scanner"
+        subtitle="audit your webhook endpoints for invalid signatures, replay risk, injection"
+        right={
+          <div
+            className="flex items-center"
+            style={{
+              gap: 8,
+              padding: "6px 10px",
+              border: "1px solid var(--hw-line-2)",
+              borderRadius: 7,
+            }}
+          >
+            <Dot tone={totalVulnerabilities > 0 ? "red" : "green"} />
+            <span
+              className="hw-mono"
+              style={{ fontSize: 11, color: "var(--hw-ink-2)" }}
+            >
+              {scannedEndpoints} / {totalEndpoints} scanned · {totalVulnerabilities} findings
             </span>
           </div>
-          <p className="text-3xl font-bold tabular-nums text-[var(--text-primary)] stat-value">
-            {totalEndpoints}
-          </p>
-        </div>
-        <div className="glass rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <Scan className="h-4 w-4 text-emerald-400" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              Avg Score
-            </span>
-          </div>
-          <p className={`text-3xl font-bold tabular-nums stat-value ${scannedEndpoints > 0 ? scoreColor(avgScore) : "text-[var(--text-tertiary)]"}`}>
-            {scannedEndpoints > 0 ? avgScore : "—"}
-          </p>
-        </div>
-        <div className="glass rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-4 w-4 text-red-400" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-              Vulnerabilities
-            </span>
-          </div>
-          <p className={`text-3xl font-bold tabular-nums stat-value ${totalVulnerabilities > 0 ? "text-red-400" : "text-[var(--text-primary)]"}`}>
-            {totalVulnerabilities}
-          </p>
-        </div>
-      </div>
+        }
+      />
+      <div
+        className="hw-scroll flex flex-col"
+        style={{
+          padding: "24px 28px 40px",
+          gap: 20,
+          overflow: "auto",
+          flex: 1,
+        }}
+      >
+        <section
+          className="hw-fade-up grid"
+          style={{ gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}
+        >
+          <Stat
+            label="Endpoints"
+            value={totalEndpoints.toString()}
+            icon="shield"
+          />
+          <Stat
+            label="Avg score"
+            value={scannedEndpoints > 0 ? avgScore.toString() : "—"}
+            icon="chart"
+            tone={scannedEndpoints > 0 ? scoreTone(avgScore) : undefined}
+          />
+          <Stat
+            label="Vulnerabilities"
+            value={totalVulnerabilities.toString()}
+            icon="alert"
+            tone={totalVulnerabilities > 0 ? "red" : undefined}
+          />
+        </section>
 
-      {/* Endpoint List */}
-      <div className="fade-up fade-up-2">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-1 h-4 rounded-full bg-indigo-500" />
-          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-            Endpoints
-          </h2>
-        </div>
-
-        {endpoints.length === 0 ? (
-          <div className="glass rounded-xl p-16 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--bg-surface)] mb-4">
-              <ShieldCheck className="h-6 w-6 text-[var(--text-faint)]" />
+        <section className="hw-fade-up hw-fade-up-1">
+          <div
+            className="hw-panel overflow-hidden"
+            style={{ background: "var(--hw-bg-2)" }}
+          >
+            <div
+              style={{
+                padding: "14px 20px",
+                borderBottom: "1px solid var(--hw-line)",
+              }}
+            >
+              <SectionHeader title="Endpoints" />
             </div>
-            <p className="text-[var(--text-secondary)] font-medium text-[15px]">
-              No endpoints to scan
-            </p>
-            <p className="text-[var(--text-faint)] text-sm mt-1 max-w-sm mx-auto">
-              Add an integration to start scanning your webhook endpoints for
-              security vulnerabilities.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {endpoints.map((ep) => {
-              const scan = ep.latestScan;
-              const findings = (scan?.findings ?? []) as Array<{
-                vulnerabilityType: string;
-                severity: string;
-                description: string;
-              }>;
-
-              return (
-                <div
-                  key={ep.id}
-                  className="glass rounded-xl p-5 transition-all duration-200 hover:border-[var(--border-strong)]"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2.5 mb-1">
-                        <span className="text-[13px] font-medium text-[var(--text-primary)] truncate">
-                          {ep.url}
-                        </span>
-                        <span className="text-[11px] text-[var(--text-muted)] bg-[var(--bg-surface)] px-2 py-0.5 rounded shrink-0">
-                          {ep.integrationName}
-                        </span>
-                      </div>
-                      {scan ? (
-                        <div className="flex items-center gap-3 mt-2">
-                          <span
-                            className={`text-[22px] font-bold tabular-nums ${scoreColor(scan.score)}`}
-                          >
-                            {scan.score}
-                          </span>
-                          <span className="text-[11px] text-[var(--text-faint)]">
-                            / 100
-                          </span>
-                          {findings.length > 0 && (
-                            <span className="text-[11px] text-red-400/70">
-                              {findings.length} finding{findings.length !== 1 ? "s" : ""}
-                            </span>
-                          )}
-                          {findings.length === 0 && (
-                            <span className="text-[11px] text-emerald-400/70 flex items-center gap-1">
-                              <CheckCircle2 className="h-3 w-3" />
-                              All checks passed
-                            </span>
-                          )}
-                          <span className="text-[11px] text-[var(--text-ghost)] ml-auto">
-                            {new Date(scan.scannedAt).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                              hour12: false,
-                            })}
-                          </span>
-                        </div>
-                      ) : (
-                        <p className="text-[12px] text-[var(--text-faint)] mt-1">
-                          Not scanned yet
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {scan && (
-                        <button
-                          onClick={() => handleViewScan(scan.id)}
-                          className="px-3 py-1.5 text-[12px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-secondary)] bg-[var(--bg-surface)] hover:bg-[var(--bg-surface-hover)] rounded-lg transition-all"
-                        >
-                          Details
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleScan(ep.id)}
-                        disabled={scanning[ep.id]}
-                        className={`px-4 py-1.5 text-[12px] font-medium rounded-lg transition-all ${
-                          scanning[ep.id]
-                            ? "bg-indigo-500/10 text-indigo-400/50 cursor-wait"
-                            : "bg-indigo-500/15 text-indigo-400 hover:bg-indigo-500/25"
-                        }`}
+            {endpoints.length === 0 ? (
+              <div
+                style={{
+                  padding: "56px 24px",
+                  textAlign: "center",
+                  fontSize: 13,
+                  color: "var(--hw-ink-4)",
+                }}
+              >
+                No endpoints to scan. Add an integration to get started.
+              </div>
+            ) : (
+              <div>
+                {endpoints.map((ep, i) => {
+                  const scan = ep.latestScan;
+                  const findings = (scan?.findings ?? []) as Array<{
+                    vulnerabilityType: string;
+                    severity: string;
+                    description: string;
+                  }>;
+                  const tone = scan ? scoreTone(scan.score) : undefined;
+                  return (
+                    <div
+                      key={ep.id}
+                      style={{
+                        padding: "16px 20px",
+                        borderTop: i ? "1px solid var(--hw-line)" : "none",
+                      }}
+                    >
+                      <div
+                        className="flex items-center"
+                        style={{ gap: 14 }}
                       >
-                        {scanning[ep.id] ? (
-                          <span className="flex items-center gap-2">
-                            <span className="w-3 h-3 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-spin" />
-                            Scanning
-                          </span>
-                        ) : (
-                          "Run Scan"
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Inline findings preview */}
-                  {findings.length > 0 && (
-                    <div className="mt-4 pt-4 border-t border-[var(--border-subtle)] space-y-2">
-                      {findings.map((f, i) => (
-                        <div
-                          key={i}
-                          className="flex items-start gap-2.5 text-[12px]"
-                        >
-                          <SeverityBadge
-                            severity={f.severity as AnomalySeverity}
-                          />
-                          <span className="text-[var(--text-tertiary)] line-clamp-1">
-                            {f.description}
-                          </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div
+                            className="flex items-center"
+                            style={{ gap: 10, marginBottom: 6 }}
+                          >
+                            <span
+                              className="hw-mono"
+                              style={{
+                                fontSize: 12.5,
+                                color: "var(--hw-ink)",
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                maxWidth: 320,
+                              }}
+                            >
+                              {ep.url}
+                            </span>
+                            <Chip>{ep.integrationName}</Chip>
+                          </div>
+                          {scan ? (
+                            <div
+                              className="flex items-center flex-wrap"
+                              style={{ gap: 12 }}
+                            >
+                              <span
+                                className="hw-mono hw-num"
+                                style={{
+                                  fontSize: 22,
+                                  fontWeight: 500,
+                                  color: `var(--hw-${tone})`,
+                                }}
+                              >
+                                {scan.score}
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    color: "var(--hw-ink-4)",
+                                    marginLeft: 4,
+                                  }}
+                                >
+                                  / 100
+                                </span>
+                              </span>
+                              {findings.length > 0 ? (
+                                <Chip tone="red">
+                                  {findings.length} finding
+                                  {findings.length !== 1 ? "s" : ""}
+                                </Chip>
+                              ) : (
+                                <Chip tone="green">
+                                  <Icon name="check" size={10} /> all checks passed
+                                </Chip>
+                              )}
+                              <span
+                                className="hw-mono hw-num"
+                                style={{
+                                  fontSize: 11,
+                                  color: "var(--hw-ink-4)",
+                                  marginLeft: "auto",
+                                }}
+                              >
+                                {new Date(scan.scannedAt).toLocaleString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  hour12: false,
+                                })}
+                              </span>
+                            </div>
+                          ) : (
+                            <div
+                              className="hw-mono"
+                              style={{
+                                fontSize: 11,
+                                color: "var(--hw-ink-4)",
+                              }}
+                            >
+                              not scanned yet
+                            </div>
+                          )}
                         </div>
-                      ))}
+                        <div className="flex items-center" style={{ gap: 8 }}>
+                          {scan && (
+                            <button
+                              type="button"
+                              onClick={() => handleViewScan(scan.id)}
+                              className="hw-btn hw-btn-ghost"
+                            >
+                              Details
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleScan(ep.id)}
+                            disabled={scanning[ep.id]}
+                            className="hw-btn hw-btn-indigo"
+                            style={{ opacity: scanning[ep.id] ? 0.6 : 1 }}
+                          >
+                            {scanning[ep.id] ? (
+                              <>
+                                <Dot tone="indigo" /> Scanning…
+                              </>
+                            ) : (
+                              <>
+                                <Icon name="search" size={13} /> Run scan
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {findings.length > 0 && (
+                        <div
+                          style={{
+                            marginTop: 12,
+                            paddingTop: 12,
+                            borderTop: "1px solid var(--hw-line)",
+                          }}
+                        >
+                          <div className="flex flex-col" style={{ gap: 6 }}>
+                            {findings.map((f, idx) => (
+                              <div
+                                key={idx}
+                                className="flex items-center"
+                                style={{ gap: 10 }}
+                              >
+                                <Chip tone={severityChipTone(f.severity)}>
+                                  {f.severity}
+                                </Chip>
+                                <span
+                                  style={{
+                                    fontSize: 12,
+                                    color: "var(--hw-ink-3)",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {f.description}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
+        </section>
       </div>
 
-      {/* Scan Detail Modal */}
       {selectedScan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="glass rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(6px)",
+          }}
+        >
+          <div
+            className="hw-panel hw-scroll"
+            style={{
+              padding: 28,
+              maxWidth: 680,
+              width: "calc(100% - 32px)",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              background: "var(--hw-bg-2)",
+            }}
+          >
+            <div
+              className="flex items-center justify-between"
+              style={{ marginBottom: 20 }}
+            >
+              <div className="flex items-center" style={{ gap: 14 }}>
                 <div
-                  className={`flex items-center justify-center w-12 h-12 rounded-xl ${
-                    selectedScan.score >= 80
-                      ? "bg-emerald-500/10"
-                      : selectedScan.score >= 50
-                        ? "bg-amber-500/10"
-                        : "bg-red-500/10"
-                  } ${scoreGlow(selectedScan.score)}`}
+                  className="grid place-items-center"
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 10,
+                    background: `rgba(${
+                      scoreTone(selectedScan.score) === "green"
+                        ? "74,222,128"
+                        : scoreTone(selectedScan.score) === "amber"
+                          ? "251,191,36"
+                          : "248,113,113"
+                    },0.1)`,
+                    border: `1px solid var(--hw-${scoreTone(selectedScan.score)})`,
+                  }}
                 >
-                  {selectedScan.score >= 80 ? (
-                    <ShieldCheck className={`h-6 w-6 ${scoreColor(selectedScan.score)}`} />
-                  ) : (
-                    <ShieldAlert className={`h-6 w-6 ${scoreColor(selectedScan.score)}`} />
-                  )}
+                  <Icon
+                    name="shield"
+                    size={22}
+                    color={`var(--hw-${scoreTone(selectedScan.score)})`}
+                  />
                 </div>
                 <div>
-                  <p className={`text-2xl font-bold ${scoreColor(selectedScan.score)}`}>
+                  <div
+                    className="hw-mono hw-num"
+                    style={{
+                      fontSize: 22,
+                      fontWeight: 500,
+                      color: `var(--hw-${scoreTone(selectedScan.score)})`,
+                    }}
+                  >
                     {selectedScan.score} / 100
-                  </p>
-                  <p className="text-[11px] text-[var(--text-muted)]">
-                    Scanned{" "}
+                  </div>
+                  <div
+                    className="hw-mono"
+                    style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+                  >
+                    scanned{" "}
                     {new Date(selectedScan.scannedAt).toLocaleString("en-US", {
                       month: "short",
                       day: "numeric",
@@ -333,63 +438,163 @@ export function SecurityClient({ endpoints }: { endpoints: EndpointWithScan[] })
                       minute: "2-digit",
                       hour12: false,
                     })}
-                  </p>
+                  </div>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedScan(null)}
-                className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] text-xl transition-colors"
+                aria-label="Close"
+                className="grid place-items-center"
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: 6,
+                  border: "1px solid var(--hw-line-2)",
+                  background: "var(--hw-bg-3)",
+                  color: "var(--hw-ink-3)",
+                }}
               >
-                &times;
+                <Icon name="x" size={14} />
               </button>
             </div>
 
             {(() => {
-              const detailFindings = (selectedScan.findings_detail ?? selectedScan.findings ?? []) as ScanFinding[];
+              const detailFindings = (selectedScan.findings_detail ??
+                selectedScan.findings ??
+                []) as ScanFinding[];
               return detailFindings.length > 0 ? (
-              <div className="space-y-4">
-                {detailFindings.map((f, idx) => (
+                <div className="flex flex-col" style={{ gap: 14 }}>
+                  {detailFindings.map((f, idx) => (
+                    <div
+                      key={idx}
+                      className="hw-panel"
+                      style={{
+                        padding: 18,
+                        background: "var(--hw-bg-3)",
+                      }}
+                    >
+                      <div
+                        className="flex items-center"
+                        style={{ gap: 10, marginBottom: 10 }}
+                      >
+                        <Chip tone={severityChipTone(f.severity)}>
+                          {f.severity}
+                        </Chip>
+                        <Chip>{f.vulnerabilityType.replace(/_/g, " ")}</Chip>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "var(--hw-ink-2)",
+                          marginBottom: 12,
+                          lineHeight: 1.55,
+                        }}
+                      >
+                        {f.description}
+                      </div>
+                      {f.remediation && (
+                        <div
+                          className="hw-mono"
+                          style={{
+                            padding: "10px 14px",
+                            borderRadius: 8,
+                            background: "rgba(74,222,128,0.06)",
+                            border: "1px solid rgba(74,222,128,0.22)",
+                            fontSize: 11.5,
+                            color: "var(--hw-ink-3)",
+                          }}
+                        >
+                          <span
+                            style={{ color: "var(--hw-green)", fontWeight: 500 }}
+                          >
+                            remediate ·
+                          </span>{" "}
+                          {f.remediation}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  style={{
+                    padding: "40px 16px",
+                    textAlign: "center",
+                  }}
+                >
+                  <Icon
+                    name="check"
+                    size={28}
+                    color="var(--hw-green)"
+                    style={{ display: "inline-block" }}
+                  />
                   <div
-                    key={idx}
-                    className="bg-[var(--bg-surface)] rounded-xl p-5 border border-[var(--border-subtle)]"
+                    style={{
+                      fontSize: 14,
+                      color: "var(--hw-ink-2)",
+                      marginTop: 12,
+                      fontWeight: 500,
+                    }}
                   >
-                    <div className="flex items-center gap-2.5 mb-3">
-                      <SeverityBadge severity={f.severity as AnomalySeverity} />
-                      <span className="text-[11px] text-[var(--text-muted)] bg-[var(--bg-surface)] px-2 py-0.5 rounded">
-                        {f.vulnerabilityType.replace(/_/g, " ")}
-                      </span>
-                    </div>
-                    <p className="text-[13px] text-[var(--text-secondary)] mb-3">
-                      {f.description}
-                    </p>
-                    {f.remediation && (
-                    <div className="bg-emerald-500/5 rounded-lg p-3 border border-emerald-500/10">
-                      <p className="text-[11px] font-medium text-emerald-400/80 mb-1">
-                        Remediation
-                      </p>
-                      <p className="text-[12px] text-[var(--text-tertiary)]">
-                        {f.remediation}
-                      </p>
-                    </div>
-                    )}
+                    All security checks passed
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <CheckCircle2 className="h-8 w-8 text-emerald-400 mx-auto mb-3" />
-                <p className="text-[var(--text-secondary)] font-medium">
-                  All security checks passed
-                </p>
-                <p className="text-[var(--text-faint)] text-sm mt-1">
-                  No vulnerabilities detected in this scan.
-                </p>
-              </div>
-            );
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--hw-ink-4)",
+                      marginTop: 4,
+                    }}
+                  >
+                    No vulnerabilities detected in this scan.
+                  </div>
+                </div>
+              );
             })()}
           </div>
         </div>
       )}
+    </>
+  );
+}
+
+function Stat({
+  label,
+  value,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: string;
+  icon: "shield" | "chart" | "alert";
+  tone?: "green" | "amber" | "red";
+}) {
+  const color =
+    tone === "green"
+      ? "var(--hw-green)"
+      : tone === "amber"
+        ? "var(--hw-amber)"
+        : tone === "red"
+          ? "var(--hw-red)"
+          : "var(--hw-ink)";
+  const iconColor = tone ? `var(--hw-${tone})` : "var(--hw-indigo-ink)";
+  return (
+    <div
+      className="hw-panel"
+      style={{ padding: "18px 20px", background: "var(--hw-bg-2)" }}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="hw-label">{label}</div>
+          <div
+            className="hw-mono hw-num"
+            style={{ fontSize: 26, fontWeight: 500, marginTop: 6, color }}
+          >
+            {value}
+          </div>
+        </div>
+        <Icon name={icon} size={16} color={iconColor} />
+      </div>
     </div>
   );
 }

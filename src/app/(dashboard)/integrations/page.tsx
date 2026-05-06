@@ -1,11 +1,10 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db, integrations, endpoints } from "@/lib/db";
 import { eq, desc, inArray } from "drizzle-orm";
-import { Plug, Plus, ArrowUpRight } from "lucide-react";
-import Link from "next/link";
-import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
+import { Chip, Dot, Icon, ProviderMark, DashTopbar } from "@/components/hw";
 
 export default async function IntegrationsPage() {
   const supabase = await createClient();
@@ -27,172 +26,263 @@ export default async function IntegrationsPage() {
           .from(endpoints)
           .where(inArray(endpoints.integrationId, integrationIds))
       : [];
-  const endpointMap = Object.fromEntries(
-    userEndpoints.map((e) => [e.integrationId, e])
+  const endpointMap = new Map(
+    userEndpoints.map((e) => [e.integrationId, e] as const),
   );
 
-  const providerColors: Record<string, string> = {
-    stripe: "text-violet-400 bg-violet-500/10",
-    shopify: "text-green-400 bg-green-500/10",
-    github: "text-[var(--text-secondary)] bg-[var(--bg-surface)]",
-  };
+  const activeCount = userIntegrations.filter((i) => i.status === "active").length;
+  const pausedCount = userIntegrations.filter((i) => i.status === "paused").length;
+  const degraded = userEndpoints.filter(
+    (e) => e.circuitState !== "closed",
+  ).length;
 
   return (
-    <div className="space-y-8">
-      <RealtimeRefresh tables={["integrations", "endpoints"]} />
-      <div className="flex items-center justify-between fade-up">
-        <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
-            Integrations
-          </h1>
-          <p className="text-[var(--text-tertiary)] mt-1 text-[15px]">
-            Manage your webhook integrations
-          </p>
-        </div>
-        <Link
-          href="/integrations/new"
-          className="flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-[13px] font-medium text-white hover:bg-indigo-400 transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          New integration
-        </Link>
-      </div>
-
-      {userIntegrations.length === 0 ? (
-        <div className="glass rounded-xl p-16 text-center fade-up fade-up-1">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--bg-surface)] mb-4">
-            <Plug className="h-6 w-6 text-[var(--text-faint)]" />
-          </div>
-          <p className="text-[var(--text-secondary)] font-medium text-[15px]">
-            No integrations yet
-          </p>
-          <p className="text-[var(--text-faint)] text-sm mt-1 max-w-sm mx-auto">
-            Connect Stripe, Shopify, GitHub, or any webhook provider.
-          </p>
-          <Link
-            href="/integrations/new"
-            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-[13px] font-medium text-white hover:bg-indigo-400 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add integration
-          </Link>
-        </div>
-      ) : (
-        <div className="grid gap-4 fade-up fade-up-1">
-          {userIntegrations.map((integration) => {
-            const endpoint = endpointMap[integration.id];
-            return (
-              <Link
-                key={integration.id}
-                href={`/integrations/${integration.id}`}
-                className="group glass rounded-xl p-5 flex items-center gap-5 transition-all duration-200 hover:border-[var(--border-strong)]"
+    <>
+      <DashTopbar
+        title="Integrations"
+        subtitle="every source pushing events into HookWise"
+        right={
+          <>
+            <div
+              className="flex items-center"
+              style={{
+                gap: 8,
+                padding: "6px 10px",
+                border: "1px solid var(--hw-line-2)",
+                borderRadius: 7,
+              }}
+            >
+              <Dot tone={degraded > 0 ? "amber" : "green"} />
+              <span
+                className="hw-mono"
+                style={{ fontSize: 11, color: "var(--hw-ink-2)" }}
               >
-                {/* Provider badge */}
-                <div
-                  className={`flex items-center justify-center w-10 h-10 rounded-lg text-[13px] font-bold shrink-0 ${
-                    providerColors[integration.provider] ?? providerColors.github
-                  }`}
-                >
-                  {integration.provider === "stripe"
-                    ? "S"
-                    : integration.provider === "shopify"
-                    ? "Sh"
-                    : "GH"}
-                </div>
+                {activeCount} active · {pausedCount} paused · {degraded} degraded
+              </span>
+            </div>
+            <Link href="/integrations/new" className="hw-btn hw-btn-indigo">
+              <Icon name="plug" size={13} /> New integration
+            </Link>
+          </>
+        }
+      />
 
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2.5 mb-1">
-                    <h3 className="font-semibold text-[var(--text-primary)] text-[15px]">
-                      {integration.name}
-                    </h3>
-                    <span
-                      className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${
-                        integration.status === "active"
-                          ? "text-emerald-400"
-                          : integration.status === "paused"
-                          ? "text-amber-400"
-                          : "text-red-400"
-                      }`}
-                    >
-                      <span
-                        className={`w-1.5 h-1.5 rounded-full ${
-                          integration.status === "active"
-                            ? "bg-emerald-400"
-                            : integration.status === "paused"
-                            ? "bg-amber-400"
-                            : "bg-red-400"
-                        }`}
-                      />
-                      {integration.status}
-                    </span>
-                    {endpoint && <HealthDot state={endpoint.circuitState} />}
-                  </div>
-                  <div className="flex items-center gap-3 text-[12px] text-[var(--text-faint)]">
-                    <span className="font-mono">
-                      /api/ingest/{integration.id}
-                    </span>
-                  </div>
-                  <div className="text-[12px] text-[var(--text-ghost)] mt-0.5 truncate">
-                    {integration.destinationUrl}
-                  </div>
-                </div>
-
-                {/* Health stats */}
-                {endpoint && (
-                  <div className="hidden sm:flex items-center gap-6 shrink-0">
-                    <div className="text-right">
-                      <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">
-                        Success
-                      </p>
-                      <p className="text-[15px] font-semibold text-[var(--text-primary)] tabular-nums">
-                        {endpoint.successRate.toFixed(1)}%
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">
-                        Latency
-                      </p>
-                      <p className="text-[15px] font-semibold text-[var(--text-primary)] tabular-nums">
-                        {endpoint.avgResponseMs.toFixed(0)}ms
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                <ArrowUpRight className="h-4 w-4 text-[var(--text-ghost)] group-hover:text-[var(--text-tertiary)] transition-colors shrink-0" />
+      <div
+        className="hw-scroll flex flex-col"
+        style={{
+          padding: "24px 28px 40px",
+          gap: 24,
+          overflow: "auto",
+          flex: 1,
+        }}
+      >
+        {userIntegrations.length === 0 ? (
+          <section className="hw-fade-up">
+            <div
+              className="hw-panel flex flex-col items-center justify-center"
+              style={{
+                padding: "72px 24px",
+                background: "var(--hw-bg-2)",
+                textAlign: "center",
+                gap: 14,
+              }}
+            >
+              <div
+                className="grid place-items-center"
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 12,
+                  background: "var(--hw-panel)",
+                  border: "1px solid var(--hw-line)",
+                }}
+              >
+                <Icon name="plug" size={22} color="var(--hw-ink-4)" />
+              </div>
+              <div style={{ fontSize: 16, color: "var(--hw-ink)" }}>
+                No integrations yet
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "var(--hw-ink-4)",
+                  maxWidth: 380,
+                }}
+              >
+                Connect Stripe, Shopify, GitHub, or any generic webhook source.
+                HookWise starts protecting from the first event.
+              </div>
+              <Link href="/integrations/new" className="hw-btn hw-btn-primary">
+                <Icon name="plug" size={13} /> Add integration
               </Link>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function HealthDot({ state }: { state: string }) {
-  const config: Record<string, { label: string; dot: string; text: string }> = {
-    closed: {
-      label: "Healthy",
-      dot: "bg-emerald-400 glow-green",
-      text: "text-emerald-400",
-    },
-    half_open: {
-      label: "Degraded",
-      dot: "bg-amber-400 glow-amber",
-      text: "text-amber-400",
-    },
-    open: {
-      label: "Down",
-      dot: "bg-red-400 glow-red animate-pulse-glow",
-      text: "text-red-400",
-    },
-  };
-  const { label, dot, text } = config[state] ?? config.closed;
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
-      {label}
-    </span>
+            </div>
+          </section>
+        ) : (
+          <section className="hw-fade-up">
+            <div
+              className="hw-panel overflow-hidden"
+              style={{ background: "var(--hw-bg-2)" }}
+            >
+              <div
+                style={{
+                  padding: "14px 20px",
+                  borderBottom: "1px solid var(--hw-line)",
+                }}
+              >
+                <span className="hw-label">
+                  {userIntegrations.length} INTEGRATION{userIntegrations.length === 1 ? "" : "S"}
+                </span>
+              </div>
+              <table className="hw-table">
+                <thead>
+                  <tr>
+                    <th>Integration</th>
+                    <th>Provider</th>
+                    <th>Destination</th>
+                    <th style={{ textAlign: "right" }}>Success</th>
+                    <th style={{ textAlign: "right" }}>p95</th>
+                    <th>Health</th>
+                    <th>Status</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {userIntegrations.map((integration) => {
+                    const endpoint = endpointMap.get(integration.id);
+                    const success = endpoint?.successRate ?? 100;
+                    const p95 = endpoint?.avgResponseMs ?? 0;
+                    const circuit = endpoint?.circuitState ?? "closed";
+                    return (
+                      <tr key={integration.id}>
+                        <td>
+                          <Link
+                            href={`/integrations/${integration.id}`}
+                            className="flex items-center"
+                            style={{ gap: 10 }}
+                          >
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: 13,
+                                  color: "var(--hw-ink)",
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {integration.name}
+                              </div>
+                              <div
+                                className="hw-mono"
+                                style={{
+                                  fontSize: 11,
+                                  color: "var(--hw-ink-4)",
+                                  marginTop: 2,
+                                }}
+                              >
+                                /api/ingest/{integration.id.slice(0, 8)}…
+                              </div>
+                            </div>
+                          </Link>
+                        </td>
+                        <td>
+                          <div className="flex items-center" style={{ gap: 8 }}>
+                            <ProviderMark
+                              provider={integration.provider}
+                              size={16}
+                            />
+                            <span
+                              style={{
+                                color: "var(--hw-ink-2)",
+                                textTransform: "capitalize",
+                              }}
+                            >
+                              {integration.provider}
+                            </span>
+                          </div>
+                        </td>
+                        <td
+                          className="hw-mono"
+                          style={{
+                            fontSize: 11.5,
+                            color: "var(--hw-ink-3)",
+                            maxWidth: 260,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {integration.destinationUrl}
+                        </td>
+                        <td
+                          className="hw-mono hw-num"
+                          style={{
+                            textAlign: "right",
+                            color:
+                              success < 95
+                                ? "var(--hw-amber)"
+                                : "var(--hw-ink-2)",
+                          }}
+                        >
+                          {success.toFixed(1)}%
+                        </td>
+                        <td
+                          className="hw-mono hw-num"
+                          style={{
+                            textAlign: "right",
+                            color:
+                              p95 > 400
+                                ? "var(--hw-amber)"
+                                : "var(--hw-ink-3)",
+                          }}
+                        >
+                          {Math.round(p95)}ms
+                        </td>
+                        <td>
+                          {circuit === "closed" && (
+                            <Chip tone="green">
+                              <Dot tone="green" quiet /> healthy
+                            </Chip>
+                          )}
+                          {circuit === "half_open" && (
+                            <Chip tone="amber">
+                              <Dot tone="amber" quiet /> degraded
+                            </Chip>
+                          )}
+                          {circuit === "open" && (
+                            <Chip tone="red">
+                              <Dot tone="red" quiet /> down
+                            </Chip>
+                          )}
+                        </td>
+                        <td>
+                          <Chip
+                            tone={
+                              integration.status === "active"
+                                ? "green"
+                                : integration.status === "paused"
+                                  ? "amber"
+                                  : "red"
+                            }
+                          >
+                            {integration.status}
+                          </Chip>
+                        </td>
+                        <td style={{ textAlign: "right" }}>
+                          <Link
+                            href={`/integrations/${integration.id}`}
+                            style={{ color: "var(--hw-ink-4)" }}
+                          >
+                            <Icon name="chevron-right" size={14} />
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+      </div>
+    </>
   );
 }

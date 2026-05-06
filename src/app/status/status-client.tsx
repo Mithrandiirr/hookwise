@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import type { StatusData, StatusProviderData } from "./page";
+import { Chip, Dot, ProviderMark } from "@/components/hw";
+import type { StatusData, StatusProviderData, IncidentEntry } from "./page";
 
-const STATUS_COLORS = {
-  operational: "bg-emerald-500",
-  degraded: "bg-amber-500",
-  outage: "bg-red-500",
+const STATUS_TONE = {
+  operational: "green",
+  degraded: "amber",
+  outage: "red",
 } as const;
 
 const STATUS_LABELS = {
@@ -31,26 +32,29 @@ function formatPercent(val: number): string {
 
 function TimeAgo({ date }: { date: string | null }) {
   const [ago, setAgo] = useState("");
-
   useEffect(() => {
     if (!date) {
-      setAgo("No data");
+      setAgo("no data");
       return;
     }
-
     function update() {
       const diff = Math.floor((Date.now() - new Date(date!).getTime()) / 1000);
       if (diff < 60) setAgo(`${diff}s ago`);
       else if (diff < 3600) setAgo(`${Math.floor(diff / 60)}m ago`);
       else setAgo(`${Math.floor(diff / 3600)}h ago`);
     }
-
     update();
     const interval = setInterval(update, 10_000);
     return () => clearInterval(interval);
   }, [date]);
-
-  return <span className="text-[var(--text-tertiary)] text-xs">{ago}</span>;
+  return (
+    <span
+      className="hw-mono"
+      style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+    >
+      {ago}
+    </span>
+  );
 }
 
 function ProviderCard({
@@ -65,48 +69,62 @@ function ProviderCard({
   const eventVolume = data.metrics["event_volume"]?.value ?? 0;
   const p50 = data.metrics["p50_latency"]?.value ?? 0;
   const p95 = data.metrics["p95_latency"]?.value ?? 0;
+  const tone = STATUS_TONE[data.status];
 
   return (
-    <div className="rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className={`w-2.5 h-2.5 rounded-full ${STATUS_COLORS[data.status]}`} />
-          <h3 className="text-base font-semibold">{PROVIDER_LABELS[name] ?? name}</h3>
+    <div
+      className="hw-panel"
+      style={{ padding: 22, background: "var(--hw-bg-2)" }}
+    >
+      <div
+        className="flex items-center justify-between"
+        style={{ marginBottom: 18 }}
+      >
+        <div className="flex items-center" style={{ gap: 10 }}>
+          <ProviderMark provider={name} size={20} />
+          <span style={{ fontSize: 15, fontWeight: 600, color: "var(--hw-ink)" }}>
+            {PROVIDER_LABELS[name] ?? name}
+          </span>
         </div>
-        <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-          data.status === "operational"
-            ? "bg-emerald-500/10 text-emerald-400"
-            : data.status === "degraded"
-            ? "bg-amber-500/10 text-amber-400"
-            : "bg-red-500/10 text-red-400"
-        }`}>
+        <Chip tone={tone}>
+          <Dot tone={tone} quiet />
           {STATUS_LABELS[data.status]}
-        </span>
+        </Chip>
       </div>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <p className="text-xs text-[var(--text-tertiary)] mb-1">Avg Latency</p>
-          <p className="text-sm font-mono">{formatMs(avgLatency)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-[var(--text-tertiary)] mb-1">Failure Rate</p>
-          <p className="text-sm font-mono">{formatPercent(failureRate)}</p>
-        </div>
-        <div>
-          <p className="text-xs text-[var(--text-tertiary)] mb-1">P50 / P95</p>
-          <p className="text-sm font-mono">
-            {formatMs(p50)} / {formatMs(p95)}
-          </p>
-        </div>
-        <div>
-          <p className="text-xs text-[var(--text-tertiary)] mb-1">Event Volume (5m)</p>
-          <p className="text-sm font-mono">{eventVolume.toLocaleString()}</p>
-        </div>
+      <div
+        className="grid"
+        style={{ gridTemplateColumns: "1fr 1fr", gap: 14 }}
+      >
+        <Metric label="Avg latency" value={formatMs(avgLatency)} />
+        <Metric label="Failure rate" value={formatPercent(failureRate)} />
+        <Metric
+          label="p50 / p95"
+          value={`${formatMs(p50)} / ${formatMs(p95)}`}
+        />
+        <Metric label="Volume · 5m" value={eventVolume.toLocaleString()} />
       </div>
-
-      <div className="mt-4 pt-3 border-t border-[var(--border-default)]">
+      <div
+        style={{
+          marginTop: 14,
+          paddingTop: 12,
+          borderTop: "1px solid var(--hw-line)",
+        }}
+      >
         <TimeAgo date={data.updatedAt} />
+      </div>
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="hw-label">{label}</div>
+      <div
+        className="hw-mono hw-num"
+        style={{ marginTop: 4, fontSize: 13, color: "var(--hw-ink)" }}
+      >
+        {value}
       </div>
     </div>
   );
@@ -118,12 +136,9 @@ export function StatusClient({ initialData }: { initialData: StatusData }) {
   const fetchData = useCallback(async () => {
     try {
       const res = await fetch("/api/status");
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
-      }
+      if (res.ok) setData(await res.json());
     } catch {
-      // Silently fail — keep showing stale data
+      // noop
     }
   }, []);
 
@@ -132,102 +147,145 @@ export function StatusClient({ initialData }: { initialData: StatusData }) {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  const overallColor =
-    data.overallStatus === "operational"
-      ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
-      : data.overallStatus === "degraded"
-      ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
-      : "bg-red-500/10 border-red-500/20 text-red-400";
+  const overallTone = STATUS_TONE[data.overallStatus];
 
   return (
-    <>
+    <div className="flex flex-col" style={{ gap: 24 }}>
       {/* Header */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-bold tracking-tight mb-2">
-          HookWise Status
+      <div className="hw-fade-up">
+        <div className="hw-kicker">PUBLIC STATUS</div>
+        <h1
+          className="hw-display"
+          style={{ marginTop: 12, fontSize: 32, color: "var(--hw-ink)" }}
+        >
+          HookWise network status
         </h1>
-        <p className="text-[var(--text-secondary)] text-sm">
-          Real-time webhook provider health across the HookWise network
+        <p
+          style={{
+            marginTop: 8,
+            fontSize: 14,
+            color: "var(--hw-ink-3)",
+          }}
+        >
+          Real-time webhook provider health across the HookWise network.
         </p>
       </div>
 
-      {/* Overall status banner */}
+      {/* Overall banner */}
       <div
-        className={`rounded-xl border px-6 py-4 mb-8 ${overallColor}`}
+        className="hw-fade-up hw-fade-up-1 hw-panel flex items-center"
+        style={{
+          padding: "18px 22px",
+          gap: 14,
+          borderColor:
+            overallTone === "green"
+              ? "rgba(74,222,128,0.22)"
+              : overallTone === "amber"
+                ? "rgba(251,191,36,0.22)"
+                : "rgba(248,113,113,0.22)",
+          background:
+            overallTone === "green"
+              ? "rgba(74,222,128,0.04)"
+              : overallTone === "amber"
+                ? "rgba(251,191,36,0.04)"
+                : "rgba(248,113,113,0.04)",
+        }}
       >
-        <div className="flex items-center gap-3">
-          <div
-            className={`w-3 h-3 rounded-full ${STATUS_COLORS[data.overallStatus]}`}
-          />
-          <span className="text-lg font-semibold">
-            {data.overallStatus === "operational"
-              ? "All Systems Operational"
-              : data.overallStatus === "degraded"
-              ? "Some Systems Degraded"
-              : "System Outage Detected"}
-          </span>
-        </div>
+        <Dot tone={overallTone} />
+        <span
+          style={{
+            fontSize: 16,
+            fontWeight: 600,
+            color: `var(--hw-${overallTone})`,
+          }}
+        >
+          {data.overallStatus === "operational"
+            ? "All systems operational"
+            : data.overallStatus === "degraded"
+              ? "Some systems degraded"
+              : "System outage detected"}
+        </span>
       </div>
 
       {/* Provider cards */}
-      <div className="grid gap-4 md:grid-cols-3 mb-10">
+      <div
+        className="hw-fade-up hw-fade-up-2 grid"
+        style={{ gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}
+      >
         {Object.entries(data.providers).map(([name, providerData]) => (
           <ProviderCard key={name} name={name} data={providerData} />
         ))}
       </div>
 
-      {/* Benchmarks table */}
+      {/* Benchmarks */}
       {data.benchmarks.length > 0 && (
-        <div className="mb-10">
-          <h2 className="text-lg font-semibold mb-4">
-            Benchmarks by Event Type
-          </h2>
-          <div className="rounded-xl border border-[var(--border-default)] overflow-hidden">
-            <table className="w-full text-sm">
+        <div className="hw-fade-up hw-fade-up-3">
+          <div className="hw-label" style={{ marginBottom: 10 }}>
+            BENCHMARKS BY EVENT TYPE
+          </div>
+          <div
+            className="hw-panel overflow-hidden"
+            style={{ background: "var(--hw-bg-2)" }}
+          >
+            <table className="hw-table">
               <thead>
-                <tr className="border-b border-[var(--border-default)] bg-[var(--bg-surface)]">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)]">
-                    Provider
-                  </th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-[var(--text-tertiary)]">
-                    Event Type
-                  </th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-[var(--text-tertiary)]">
-                    P50
-                  </th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-[var(--text-tertiary)]">
-                    P95
-                  </th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-[var(--text-tertiary)]">
-                    Failure Rate
-                  </th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-[var(--text-tertiary)]">
-                    Samples
-                  </th>
+                <tr>
+                  <th>Provider</th>
+                  <th>Event type</th>
+                  <th style={{ textAlign: "right" }}>p50</th>
+                  <th style={{ textAlign: "right" }}>p95</th>
+                  <th style={{ textAlign: "right" }}>Failure</th>
+                  <th style={{ textAlign: "right" }}>Samples</th>
                 </tr>
               </thead>
               <tbody>
                 {data.benchmarks.map((b, i) => (
-                  <tr
-                    key={i}
-                    className="border-b border-[var(--border-subtle)] last:border-0"
-                  >
-                    <td className="px-4 py-2.5 font-medium">
-                      {PROVIDER_LABELS[b.provider] ?? b.provider}
+                  <tr key={i}>
+                    <td>
+                      <div
+                        className="flex items-center"
+                        style={{ gap: 8 }}
+                      >
+                        <ProviderMark provider={b.provider} size={14} />
+                        <span style={{ fontSize: 12.5, color: "var(--hw-ink)" }}>
+                          {PROVIDER_LABELS[b.provider] ?? b.provider}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-4 py-2.5 font-mono text-[var(--text-secondary)]">
+                    <td
+                      className="hw-mono"
+                      style={{ fontSize: 11.5, color: "var(--hw-indigo-ink)" }}
+                    >
                       {b.eventType}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono">
+                    <td
+                      className="hw-mono hw-num"
+                      style={{ textAlign: "right", color: "var(--hw-ink-3)" }}
+                    >
                       {formatMs(b.p50Latency)}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono">
+                    <td
+                      className="hw-mono hw-num"
+                      style={{ textAlign: "right", color: "var(--hw-ink-3)" }}
+                    >
                       {formatMs(b.p95Latency)}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono">
+                    <td
+                      className="hw-mono hw-num"
+                      style={{
+                        textAlign: "right",
+                        color:
+                          b.failureRate > 1
+                            ? "var(--hw-amber)"
+                            : "var(--hw-ink-3)",
+                      }}
+                    >
                       {formatPercent(b.failureRate)}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-[var(--text-secondary)]">
+                    <td
+                      className="hw-mono hw-num"
+                      style={{ textAlign: "right", color: "var(--hw-ink-4)" }}
+                    >
                       {b.sampleSize}
                     </td>
                   </tr>
@@ -238,14 +296,157 @@ export function StatusClient({ initialData }: { initialData: StatusData }) {
         </div>
       )}
 
-      {/* Footer */}
-      <div className="text-center text-xs text-[var(--text-tertiary)] pb-8">
-        <p>
-          Updated every 5 minutes. Last generated:{" "}
-          <TimeAgo date={data.generatedAt} />
-        </p>
-        <p className="mt-1">Powered by HookWise</p>
+      {/* Network stats */}
+      {data.networkStats && (
+        <div className="hw-fade-up hw-fade-up-4">
+          <div className="hw-label" style={{ marginBottom: 10 }}>
+            NETWORK HEALTH
+          </div>
+          <div
+            className="grid"
+            style={{ gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}
+          >
+            <StatPanel
+              label="Providers monitored"
+              value={data.networkStats.totalProviders.toString()}
+            />
+            <StatPanel
+              label="Uptime · 24h avg"
+              value={`${data.networkStats.uptimePercent}%`}
+              tone={
+                data.networkStats.uptimePercent >= 99
+                  ? "green"
+                  : data.networkStats.uptimePercent >= 95
+                    ? "amber"
+                    : "red"
+              }
+            />
+            <StatPanel
+              label="Health samples"
+              value={data.networkStats.totalEventsProcessed.toLocaleString()}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Incidents */}
+      <div className="hw-fade-up hw-fade-up-5">
+        <div className="hw-label" style={{ marginBottom: 10 }}>
+          RECENT INCIDENTS · 24H
+        </div>
+        {data.incidents && data.incidents.length > 0 ? (
+          <div
+            className="hw-panel overflow-hidden"
+            style={{ background: "var(--hw-bg-2)" }}
+          >
+            {data.incidents
+              .slice(0, 20)
+              .map((incident: IncidentEntry, i: number) => {
+                const tone = STATUS_TONE[incident.status];
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center"
+                    style={{
+                      padding: "12px 20px",
+                      borderTop: i ? "1px solid var(--hw-line)" : "none",
+                      gap: 14,
+                    }}
+                  >
+                    <Dot tone={tone} quiet />
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 500,
+                        width: 80,
+                        color: "var(--hw-ink)",
+                      }}
+                    >
+                      {PROVIDER_LABELS[incident.provider] ?? incident.provider}
+                    </span>
+                    <Chip tone={tone}>{STATUS_LABELS[incident.status]}</Chip>
+                    <span
+                      className="hw-mono hw-num"
+                      style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+                    >
+                      {formatPercent(incident.failureRate)} failure rate
+                    </span>
+                    <span style={{ marginLeft: "auto" }}>
+                      <TimeAgo date={incident.time} />
+                    </span>
+                  </div>
+                );
+              })}
+          </div>
+        ) : (
+          <div
+            className="hw-panel flex items-center"
+            style={{
+              padding: "16px 22px",
+              background: "rgba(74,222,128,0.04)",
+              borderColor: "rgba(74,222,128,0.22)",
+              gap: 12,
+            }}
+          >
+            <Dot tone="green" />
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 500,
+                color: "var(--hw-green)",
+              }}
+            >
+              No incidents in the last 24 hours.
+            </span>
+          </div>
+        )}
       </div>
-    </>
+
+      <div
+        className="hw-mono"
+        style={{
+          textAlign: "center",
+          fontSize: 11,
+          color: "var(--hw-ink-5)",
+          paddingTop: 16,
+          borderTop: "1px solid var(--hw-line)",
+        }}
+      >
+        Updated every 5 min · last <TimeAgo date={data.generatedAt} />
+      </div>
+    </div>
+  );
+}
+
+function StatPanel({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "green" | "amber" | "red";
+}) {
+  const color =
+    tone === "green"
+      ? "var(--hw-green)"
+      : tone === "amber"
+        ? "var(--hw-amber)"
+        : tone === "red"
+          ? "var(--hw-red)"
+          : "var(--hw-ink)";
+  return (
+    <div
+      className="hw-panel"
+      style={{ padding: "20px 22px", background: "var(--hw-bg-2)" }}
+    >
+      <div className="hw-label">{label}</div>
+      <div
+        className="hw-mono hw-num"
+        style={{ marginTop: 6, fontSize: 26, fontWeight: 500, color }}
+      >
+        {value}
+      </div>
+    </div>
   );
 }

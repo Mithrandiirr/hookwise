@@ -1,5 +1,7 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
   db,
@@ -9,25 +11,22 @@ import {
   replayQueue,
   anomalies,
   reconciliationRuns,
+  transformations,
+  sequencerRules,
 } from "@/lib/db";
-import { eq, and, desc, count, isNull } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { eq, and, desc, count } from "drizzle-orm";
 import { parseDiagnosis } from "@/lib/utils/parse-diagnosis";
-import Link from "next/link";
 import {
-  ArrowLeft,
-  Activity,
-  Shield,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  Copy,
-  ArrowUpRight,
-  Gauge,
-  Timer,
-  RotateCcw,
-  Radio,
-} from "lucide-react";
+  Chip,
+  Dot,
+  Icon,
+  ProviderMark,
+  DashTopbar,
+  SectionHeader,
+} from "@/components/hw";
+import { IntegrationSettings } from "./integration-settings";
+import { TransformationsPanel } from "./transformations-panel";
+import { SequencerPanel } from "./sequencer-panel";
 
 export default async function IntegrationDetailPage({
   params,
@@ -48,11 +47,10 @@ export default async function IntegrationDetailPage({
     .where(
       and(
         eq(integrations.id, integrationId),
-        eq(integrations.userId, user.id)
-      )
+        eq(integrations.userId, user.id),
+      ),
     )
     .limit(1);
-
   if (!integration) notFound();
 
   const [endpoint] = await db
@@ -75,12 +73,11 @@ export default async function IntegrationDetailPage({
         .where(
           and(
             eq(replayQueue.endpointId, endpoint.id),
-            eq(replayQueue.status, "pending")
-          )
+            eq(replayQueue.status, "pending"),
+          ),
         )
     : [{ count: 0 }];
 
-  // Fetch recent anomalies for this integration
   const recentAnomalies = await db
     .select()
     .from(anomalies)
@@ -88,7 +85,16 @@ export default async function IntegrationDetailPage({
     .orderBy(desc(anomalies.detectedAt))
     .limit(5);
 
-  // Fetch last reconciliation run
+  const integrationTransformations = await db
+    .select()
+    .from(transformations)
+    .where(eq(transformations.integrationId, integrationId));
+
+  const integrationSequencerRules = await db
+    .select()
+    .from(sequencerRules)
+    .where(eq(sequencerRules.integrationId, integrationId));
+
   const [lastReconRun] = await db
     .select()
     .from(reconciliationRuns)
@@ -96,508 +102,557 @@ export default async function IntegrationDetailPage({
     .orderBy(desc(reconciliationRuns.ranAt))
     .limit(1);
 
-  const providerColors: Record<string, string> = {
-    stripe: "text-violet-400 bg-violet-500/10 border-violet-500/20",
-    shopify: "text-green-400 bg-green-500/10 border-green-500/20",
-    github: "text-[var(--text-secondary)] bg-[var(--bg-surface)] border-[var(--border-strong)]",
-  };
+  const circuit = endpoint?.circuitState ?? "closed";
+  const circuitTone =
+    circuit === "closed" ? "green" : circuit === "half_open" ? "amber" : "red";
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-4 fade-up">
-        <Link
-          href="/integrations"
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-all"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <h1 className="text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
-              {integration.name}
-            </h1>
-            <span
-              className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium capitalize ${
-                providerColors[integration.provider] ?? providerColors.github
-              }`}
-            >
-              {integration.provider}
-            </span>
-            <span
-              className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${
-                integration.status === "active"
-                  ? "text-emerald-400"
-                  : "text-red-400"
-              }`}
-            >
-              <span
-                className={`w-1.5 h-1.5 rounded-full ${
-                  integration.status === "active"
-                    ? "bg-emerald-400 glow-green"
-                    : "bg-red-400 glow-red"
-                }`}
-              />
-              {integration.status}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Config Panel */}
-      <div className="glass rounded-xl p-6 fade-up fade-up-1">
-        <h2 className="text-[13px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.08em] mb-4">
-          Configuration
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          <ConfigItem
-            label="Ingest URL"
-            value={`/api/ingest/${integration.id}`}
-            mono
-          />
-          <ConfigItem
-            label="Destination"
-            value={integration.destinationUrl}
-            mono
-          />
-          {integration.providerDomain && (
-            <ConfigItem
-              label="Provider Domain"
-              value={integration.providerDomain}
-              mono
-            />
-          )}
-          <ConfigItem
-            label="Created"
-            value={new Date(integration.createdAt).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          />
-          <ConfigItem
-            label="Signing Secret"
-            value={"*".repeat(24)}
-            mono
-            masked
-          />
-        </div>
-      </div>
-
-      {/* Endpoint Health */}
-      {endpoint && (
-        <div className="fade-up fade-up-2">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-4 rounded-full bg-indigo-500" />
-            <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-              Endpoint Health
-            </h2>
-          </div>
-
-          {/* Health Metrics */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
-            <HealthMetric
-              label="Circuit State"
-              icon={<Radio className="h-3.5 w-3.5" />}
-            >
-              <CircuitBadgeLarge state={endpoint.circuitState} />
-            </HealthMetric>
-            <HealthMetric
-              label="Success Rate"
-              icon={<Gauge className="h-3.5 w-3.5" />}
-            >
-              <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">
-                {endpoint.successRate.toFixed(1)}
-                <span className="text-[var(--text-faint)] text-sm ml-0.5">%</span>
-              </span>
-            </HealthMetric>
-            <HealthMetric
-              label="Avg Response"
-              icon={<Timer className="h-3.5 w-3.5" />}
-            >
-              <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">
-                {endpoint.avgResponseMs.toFixed(0)}
-                <span className="text-[var(--text-faint)] text-sm ml-0.5">ms</span>
-              </span>
-            </HealthMetric>
-            <HealthMetric
-              label="Replay Queue"
-              icon={<RotateCcw className="h-3.5 w-3.5" />}
-            >
-              <span className="text-2xl font-bold text-[var(--text-primary)] tabular-nums">
-                {pendingReplayCount[0].count}
-              </span>
-            </HealthMetric>
-          </div>
-
-          {/* Open circuit warning */}
-          {endpoint.circuitState === "open" && (
-            <div className="glass rounded-xl p-4 flex items-start gap-3 border-red-500/10 bg-red-500/[0.03]">
-              <AlertTriangle className="h-4 w-4 text-red-400 mt-0.5 shrink-0 animate-pulse-glow" />
-              <div>
-                <p className="text-[13px] text-red-400 font-medium">
-                  Circuit is open — deliveries are queued
-                </p>
-                <p className="text-[12px] text-[var(--text-muted)] mt-1">
-                  Health checks run every minute. After 3 consecutive successes
-                  the circuit transitions to half-open and queued events replay
-                  automatically.
-                  {endpoint.lastHealthCheck && (
-                    <span className="ml-2 text-[var(--text-ghost)]">
-                      Last check:{" "}
-                      {new Date(endpoint.lastHealthCheck).toLocaleString()}
-                    </span>
-                  )}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Recent Anomalies */}
-      {recentAnomalies.length > 0 && (
-        <div className="fade-up fade-up-3">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-4 rounded-full bg-amber-500" />
-            <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-              Recent Anomalies
-            </h2>
+    <>
+      <DashTopbar
+        title={
+          <span className="flex items-center" style={{ gap: 10 }}>
             <Link
-              href="/anomalies"
-              className="text-[11px] text-indigo-400 hover:text-indigo-300 ml-auto transition-colors"
+              href="/integrations"
+              style={{ color: "var(--hw-ink-4)", fontWeight: 500, fontSize: 14 }}
             >
-              View all
+              Integrations /
             </Link>
+            <span>{integration.name}</span>
+          </span>
+        }
+        subtitle={
+          <span className="flex items-center" style={{ gap: 8 }}>
+            <ProviderMark provider={integration.provider} size={14} />
+            <span className="hw-mono" style={{ fontSize: 12, color: "var(--hw-ink-3)" }}>
+              {integration.provider} · created{" "}
+              {new Date(integration.createdAt).toLocaleDateString()}
+            </span>
+          </span>
+        }
+        right={
+          <>
+            <Chip tone={integration.status === "active" ? "green" : "amber"}>
+              <Dot tone={integration.status === "active" ? "green" : "amber"} quiet />
+              {integration.status}
+            </Chip>
+          </>
+        }
+      />
+
+      <div
+        className="hw-scroll flex flex-col"
+        style={{
+          padding: "24px 28px 40px",
+          gap: 20,
+          overflow: "auto",
+          flex: 1,
+        }}
+      >
+        {/* Configuration */}
+        <section className="hw-fade-up">
+          <div
+            className="hw-panel"
+            style={{ background: "var(--hw-bg-2)", padding: 24 }}
+          >
+            <SectionHeader title="Configuration" />
+            <div
+              className="grid"
+              style={{
+                marginTop: 18,
+                gridTemplateColumns: "repeat(2, 1fr)",
+                gap: 18,
+              }}
+            >
+              <ConfigRow label="Ingest URL" value={`/api/ingest/${integration.id}`} />
+              <ConfigRow label="Destination" value={integration.destinationUrl} />
+              {integration.providerDomain && (
+                <ConfigRow label="Provider domain" value={integration.providerDomain} />
+              )}
+              <ConfigRow
+                label="Signing secret"
+                value={"•".repeat(24)}
+                muted
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            {recentAnomalies.map((anomaly) => {
-              const diagnosis = parseDiagnosis(anomaly.diagnosis);
-              return (
-                <Link
-                  key={anomaly.id}
-                  href={`/anomalies/${anomaly.id}`}
-                  className="glass rounded-xl p-4 flex items-center gap-3 hover:border-[var(--border-strong)] transition-all block"
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full shrink-0 ${
-                      anomaly.resolvedAt
-                        ? "bg-[var(--bg-surface)]"
-                        : anomaly.severity === "critical"
-                          ? "bg-red-400 glow-red"
-                          : anomaly.severity === "high"
-                            ? "bg-red-400"
-                            : "bg-amber-400"
-                    }`}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[12px] text-[var(--text-secondary)] line-clamp-1">
-                      {diagnosis.what ?? anomaly.type.replace(/_/g, " ")}
+        </section>
+
+        {/* Endpoint Health */}
+        {endpoint && (
+          <section className="hw-fade-up hw-fade-up-1">
+            <div className="flex items-center" style={{ gap: 10, marginBottom: 12 }}>
+              <span className="hw-kicker">Endpoint health</span>
+            </div>
+            <div
+              className="grid"
+              style={{ gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}
+            >
+              <HealthTile
+                label="Circuit"
+                value={
+                  <div
+                    className="flex items-center"
+                    style={{ gap: 8, color: `var(--hw-${circuitTone})` }}
+                  >
+                    <Dot
+                      tone={circuitTone}
+                      quiet={circuit === "closed"}
+                    />
+                    <span style={{ fontSize: 18, fontWeight: 500 }}>
+                      {circuit === "closed"
+                        ? "Healthy"
+                        : circuit === "half_open"
+                          ? "Degraded"
+                          : "Down"}
                     </span>
                   </div>
-                  <span className="text-[11px] text-[var(--text-ghost)] shrink-0 tabular-nums">
-                    {new Date(anomaly.detectedAt).toLocaleDateString()}
+                }
+                icon="shield"
+                iconColor={`var(--hw-${circuitTone})`}
+              />
+              <HealthTile
+                label="Success rate"
+                value={
+                  <span className="hw-mono hw-num" style={{ fontSize: 22, fontWeight: 500 }}>
+                    {endpoint.successRate.toFixed(1)}
+                    <span style={{ fontSize: 11, color: "var(--hw-ink-4)" }}>%</span>
                   </span>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Reconciliation Config */}
-      <div className="fade-up fade-up-4">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-1 h-4 rounded-full bg-emerald-500" />
-          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-            Reconciliation
-          </h2>
-        </div>
-        {integration.provider === "github" ? (
-          <div className="glass rounded-xl p-5 text-center">
-            <p className="text-[var(--text-tertiary)] text-[13px]">
-              GitHub does not provide a reconciliation API.
-            </p>
-          </div>
-        ) : integration.apiKeyEncrypted ? (
-          <div className="glass rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                Enabled
-              </span>
-              <span className="text-[11px] text-[var(--text-faint)]">
-                Runs every 5 minutes
-              </span>
+                }
+                icon="chart"
+              />
+              <HealthTile
+                label="Avg response"
+                value={
+                  <span className="hw-mono hw-num" style={{ fontSize: 22, fontWeight: 500 }}>
+                    {endpoint.avgResponseMs.toFixed(0)}
+                    <span style={{ fontSize: 11, color: "var(--hw-ink-4)" }}>ms</span>
+                  </span>
+                }
+                icon="stopwatch"
+              />
+              <HealthTile
+                label="Replay queue"
+                value={
+                  <span className="hw-mono hw-num" style={{ fontSize: 22, fontWeight: 500 }}>
+                    {pendingReplayCount[0].count}
+                  </span>
+                }
+                icon="replay"
+              />
             </div>
-            {lastReconRun ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3">
+
+            {circuit === "open" && (
+              <div
+                className="hw-panel flex items-start"
+                style={{
+                  marginTop: 14,
+                  padding: "14px 18px",
+                  background: "rgba(248,113,113,0.04)",
+                  borderColor: "rgba(248,113,113,0.22)",
+                  gap: 12,
+                }}
+              >
+                <Dot tone="red" />
                 <div>
-                  <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">Last Run</p>
-                  <p className="text-[13px] text-[var(--text-secondary)] tabular-nums">
-                    {new Date(lastReconRun.ranAt).toLocaleString("en-US", {
-                      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false
-                    })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">Provider Events</p>
-                  <p className="text-[13px] text-[var(--text-primary)] font-medium tabular-nums">{lastReconRun.providerEventsFound}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">Gaps Found</p>
-                  <p className="text-[13px] text-amber-400 font-medium tabular-nums">{lastReconRun.gapsDetected}</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">Gaps Resolved</p>
-                  <p className="text-[13px] text-emerald-400 font-medium tabular-nums">{lastReconRun.gapsResolved}</p>
+                  <div
+                    style={{ fontSize: 13, color: "var(--hw-red)", fontWeight: 500 }}
+                  >
+                    Circuit open — deliveries queued
+                  </div>
+                  <div
+                    className="hw-mono"
+                    style={{ marginTop: 4, fontSize: 11, color: "var(--hw-ink-4)" }}
+                  >
+                    Health checks run every minute. After 3 consecutive successes the
+                    circuit transitions to half-open and queued events replay.
+                    {endpoint.lastHealthCheck &&
+                      ` Last check: ${new Date(endpoint.lastHealthCheck).toLocaleString()}`}
+                  </div>
                 </div>
               </div>
+            )}
+          </section>
+        )}
+
+        {/* Recent anomalies */}
+        {recentAnomalies.length > 0 && (
+          <section className="hw-fade-up hw-fade-up-2">
+            <div
+              className="hw-panel overflow-hidden"
+              style={{ background: "var(--hw-bg-2)" }}
+            >
+              <div
+                className="flex items-center justify-between"
+                style={{
+                  padding: "14px 20px",
+                  borderBottom: "1px solid var(--hw-line)",
+                }}
+              >
+                <SectionHeader title="Recent anomalies" />
+                <Link
+                  href="/anomalies"
+                  className="hw-mono"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--hw-indigo-ink)",
+                  }}
+                >
+                  View all →
+                </Link>
+              </div>
+              {recentAnomalies.map((a, i) => {
+                const d = parseDiagnosis(a.diagnosis);
+                const tone = a.resolvedAt
+                  ? "green"
+                  : a.severity === "critical" || a.severity === "high"
+                    ? "red"
+                    : a.severity === "medium"
+                      ? "amber"
+                      : "indigo";
+                return (
+                  <Link
+                    key={a.id}
+                    href={`/anomalies/${a.id}`}
+                    className="flex items-center"
+                    style={{
+                      padding: "12px 20px",
+                      borderTop: i ? "1px solid var(--hw-line)" : "none",
+                      gap: 12,
+                    }}
+                  >
+                    <Dot tone={tone} quiet={!!a.resolvedAt} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, color: "var(--hw-ink)" }}>
+                        {d.what}
+                      </div>
+                      <div
+                        className="hw-mono"
+                        style={{ fontSize: 11, color: "var(--hw-ink-4)", marginTop: 2 }}
+                      >
+                        {a.type} · sev {a.severity}
+                      </div>
+                    </div>
+                    <span
+                      className="hw-mono hw-num"
+                      style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+                    >
+                      {new Date(a.detectedAt).toLocaleDateString()}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* Reconciliation */}
+        <section className="hw-fade-up hw-fade-up-3">
+          <div
+            className="hw-panel"
+            style={{ background: "var(--hw-bg-2)", padding: 20 }}
+          >
+            <div className="flex items-center" style={{ gap: 10, marginBottom: 14 }}>
+              <Icon name="refresh" size={14} color="var(--hw-indigo-ink)" />
+              <SectionHeader title="Reconciliation" />
+              <span style={{ marginLeft: "auto" }}>
+                {integration.provider === "github" ? (
+                  <Chip>not available</Chip>
+                ) : integration.apiKeyEncrypted ? (
+                  <Chip tone="green">enabled</Chip>
+                ) : (
+                  <Chip tone="amber">needs api key</Chip>
+                )}
+              </span>
+            </div>
+
+            {integration.provider === "github" ? (
+              <div style={{ fontSize: 12, color: "var(--hw-ink-4)" }}>
+                GitHub does not provide a reconciliation API.
+              </div>
+            ) : integration.apiKeyEncrypted ? (
+              lastReconRun ? (
+                <div
+                  className="grid"
+                  style={{ gridTemplateColumns: "repeat(4, 1fr)", gap: 18 }}
+                >
+                  <MiniStat label="Last run" value={new Date(lastReconRun.ranAt).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false })} />
+                  <MiniStat label="Provider events" value={lastReconRun.providerEventsFound.toString()} />
+                  <MiniStat label="Gaps found" value={lastReconRun.gapsDetected.toString()} tone="amber" />
+                  <MiniStat label="Gaps resolved" value={lastReconRun.gapsResolved.toString()} tone="green" />
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: "var(--hw-ink-4)" }}>
+                  No reconciliation runs yet. First run within 5 minutes.
+                </div>
+              )
             ) : (
-              <p className="text-[12px] text-[var(--text-faint)]">
-                No reconciliation runs yet. The first run will happen within 5 minutes.
-              </p>
+              <div style={{ fontSize: 12.5, color: "var(--hw-ink-3)", lineHeight: 1.55 }}>
+                Provide your {integration.provider === "stripe" ? "Stripe secret key" : "Shopify API key"} to enable gap detection and automatic recovery. Keys encrypted at rest.
+              </div>
             )}
           </div>
-        ) : (
-          <div className="glass rounded-xl p-5">
-            <p className="text-[13px] text-[var(--text-tertiary)] mb-2">
-              Provide your {integration.provider === "stripe" ? "Stripe secret key" : "Shopify API key"} to
-              enable automatic event reconciliation. HookWise will detect webhook gaps and
-              recover missing events via the provider API.
-            </p>
-            <p className="text-[11px] text-[var(--text-ghost)]">
-              Configure via the Settings page or API. Keys are encrypted at rest.
-            </p>
-          </div>
-        )}
-      </div>
+        </section>
 
-      {/* Enriched Delivery */}
-      <div className="fade-up fade-up-5">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-1 h-4 rounded-full bg-blue-500" />
-          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-            Enriched Delivery
-          </h2>
-        </div>
-        {integration.provider === "github" ? (
-          <div className="glass rounded-xl p-5 text-center">
-            <p className="text-[var(--text-tertiary)] text-[13px]">
-              Enriched delivery is not available for GitHub integrations.
-            </p>
-          </div>
-        ) : integration.enrichmentEnabled && integration.apiKeyEncrypted ? (
-          <div className="glass rounded-xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                Enabled
-              </span>
-              <span className="text-[11px] text-[var(--text-faint)]">
-                Fetches latest resource state before delivery
+        {/* Enrichment */}
+        <section className="hw-fade-up hw-fade-up-4">
+          <div
+            className="hw-panel"
+            style={{ background: "var(--hw-bg-2)", padding: 20 }}
+          >
+            <div className="flex items-center" style={{ gap: 10, marginBottom: 14 }}>
+              <Icon name="zap" size={14} color="var(--hw-indigo-ink)" />
+              <SectionHeader title="Enriched delivery" />
+              <span style={{ marginLeft: "auto" }}>
+                {integration.provider === "github" ? (
+                  <Chip>not available</Chip>
+                ) : integration.enrichmentEnabled && integration.apiKeyEncrypted ? (
+                  <Chip tone="green">enabled</Chip>
+                ) : integration.apiKeyEncrypted ? (
+                  <Chip tone="amber">disabled</Chip>
+                ) : (
+                  <Chip tone="amber">needs api key</Chip>
+                )}
               </span>
             </div>
-            <p className="text-[12px] text-[var(--text-tertiary)]">
-              When a webhook arrives, HookWise fetches the latest version of the resource from the{" "}
-              {integration.provider === "stripe" ? "Stripe" : "Shopify"} API before delivering it to your endpoint.
-              This eliminates stale data from race conditions and ensures you always process the most current state.
-            </p>
-          </div>
-        ) : integration.apiKeyEncrypted ? (
-          <div className="glass rounded-xl p-5">
-            <p className="text-[13px] text-[var(--text-tertiary)] mb-2">
-              Enriched delivery is available but not enabled. Enable it to fetch the latest resource state from the{" "}
-              {integration.provider === "stripe" ? "Stripe" : "Shopify"} API before each delivery.
-            </p>
-            <p className="text-[11px] text-[var(--text-ghost)]">
-              Enable via the Settings page or API.
-            </p>
-          </div>
-        ) : (
-          <div className="glass rounded-xl p-5">
-            <p className="text-[13px] text-[var(--text-tertiary)] mb-2">
-              Provide your {integration.provider === "stripe" ? "Stripe secret key" : "Shopify API key"} to
-              enable enriched delivery. HookWise will fetch the latest resource state before delivering webhooks,
-              eliminating stale data issues.
-            </p>
-            <p className="text-[11px] text-[var(--text-ghost)]">
-              Configure via the Settings page or API. Keys are encrypted at rest.
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Recent Events */}
-      <div className="fade-up fade-up-6">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-1 h-4 rounded-full bg-indigo-500" />
-          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-            Recent Events
-          </h2>
-          <span className="text-[11px] text-[var(--text-faint)] ml-auto">
-            {recentEvents.length} events
-          </span>
-        </div>
-        <div className="glass rounded-xl overflow-hidden">
-          {recentEvents.length === 0 ? (
-            <div className="p-16 text-center">
-              <Activity className="mx-auto h-8 w-8 text-[var(--text-ghost)] mb-3" />
-              <p className="text-[var(--text-tertiary)] text-sm">No events yet</p>
+            <div style={{ fontSize: 12.5, color: "var(--hw-ink-3)", lineHeight: 1.55 }}>
+              {integration.provider === "github"
+                ? "Enriched delivery is not available for GitHub."
+                : integration.enrichmentEnabled && integration.apiKeyEncrypted
+                  ? `Every ${integration.provider} webhook triggers a fresh fetch of the underlying resource before delivery, eliminating stale state from race conditions.`
+                  : `Enable in settings to fetch the latest resource state from the ${integration.provider === "stripe" ? "Stripe" : "Shopify"} API before each delivery.`}
             </div>
-          ) : (
-            <table className="w-full text-[13px]">
-              <thead>
-                <tr className="border-b border-[var(--border-default)]">
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Event Type
-                  </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Signature
-                  </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Source
-                  </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Received
-                  </th>
-                  <th className="px-5 py-3 w-10" />
-                </tr>
-              </thead>
-              <tbody>
-                {recentEvents.map((event) => (
-                  <tr
-                    key={event.id}
-                    className="border-b border-[var(--border-subtle)] last:border-0 table-row-hover group"
-                  >
-                    <td className="px-5 py-3.5">
-                      <Link
-                        href={`/events/${event.id}`}
-                        className="font-mono text-[12px] text-indigo-400 hover:text-indigo-300 transition-colors"
-                      >
-                        {event.eventType}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      {event.signatureValid ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-400 text-[11px]">
-                          <CheckCircle className="h-3 w-3" />
-                          Valid
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-red-400/70 text-[11px]">
-                          <XCircle className="h-3 w-3" />
-                          Invalid
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="text-[11px] text-[var(--text-muted)] bg-[var(--bg-surface)] px-2 py-0.5 rounded">
-                        {event.source}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-[var(--text-muted)] text-[12px] tabular-nums">
-                      {new Date(event.receivedAt).toLocaleString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                        second: "2-digit",
-                        hour12: false,
-                      })}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <Link href={`/events/${event.id}`}>
-                        <ArrowUpRight className="h-3.5 w-3.5 text-[var(--text-ghost)] group-hover:text-[var(--text-tertiary)] transition-colors" />
-                      </Link>
-                    </td>
+          </div>
+        </section>
+
+        {/* Transformations */}
+        <section className="hw-fade-up hw-fade-up-5">
+          <TransformationsPanel
+            integrationId={integrationId}
+            transformations={integrationTransformations.map((t) => ({
+              id: t.id,
+              eventType: t.eventType,
+              rules: t.rules as Array<{
+                action: "rename_field" | "remove_field" | "add_field" | "map_value";
+                field: string;
+                value?: unknown;
+                mapping?: Record<string, unknown>;
+              }>,
+              enabled: t.enabled,
+            }))}
+          />
+        </section>
+
+        {/* Sequencer */}
+        <section className="hw-fade-up hw-fade-up-6">
+          <SequencerPanel
+            integrationId={integrationId}
+            rules={integrationSequencerRules.map((r) => ({
+              id: r.id,
+              eventOrder: r.eventOrder as string[],
+              holdTimeoutMs: r.holdTimeoutMs,
+              enabled: r.enabled,
+            }))}
+            sequencerEnabled={integration.sequencerEnabled}
+          />
+        </section>
+
+        {/* Settings */}
+        <section className="hw-fade-up hw-fade-up-7">
+          <IntegrationSettings
+            integration={{
+              id: integration.id,
+              name: integration.name,
+              provider: integration.provider,
+              signingSecret: integration.signingSecret,
+              destinationUrl: integration.destinationUrl,
+              status: integration.status,
+              idempotencyEnabled: integration.idempotencyEnabled,
+              sequencerEnabled: integration.sequencerEnabled,
+              enrichmentEnabled: integration.enrichmentEnabled,
+              apiKeyEncrypted: integration.apiKeyEncrypted,
+              providerDomain: integration.providerDomain,
+            }}
+          />
+        </section>
+
+        {/* Recent events */}
+        <section className="hw-fade-up hw-fade-up-8">
+          <div
+            className="hw-panel overflow-hidden"
+            style={{ background: "var(--hw-bg-2)" }}
+          >
+            <div
+              className="flex items-center justify-between"
+              style={{
+                padding: "14px 20px",
+                borderBottom: "1px solid var(--hw-line)",
+              }}
+            >
+              <SectionHeader title="Recent events" />
+              <span
+                className="hw-mono"
+                style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+              >
+                {recentEvents.length} events
+              </span>
+            </div>
+            {recentEvents.length === 0 ? (
+              <div
+                style={{
+                  padding: "48px 24px",
+                  textAlign: "center",
+                  fontSize: 12,
+                  color: "var(--hw-ink-4)",
+                }}
+              >
+                No events received yet.
+              </div>
+            ) : (
+              <table className="hw-table">
+                <thead>
+                  <tr>
+                    <th>Event type</th>
+                    <th>Signature</th>
+                    <th>Source</th>
+                    <th>Received</th>
+                    <th />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
+                </thead>
+                <tbody>
+                  {recentEvents.map((event) => (
+                    <tr key={event.id}>
+                      <td>
+                        <Link
+                          href={`/events/${event.id}`}
+                          className="hw-mono"
+                          style={{ fontSize: 12.5, color: "var(--hw-indigo-ink)" }}
+                        >
+                          {event.eventType}
+                        </Link>
+                      </td>
+                      <td>
+                        {event.signatureValid ? (
+                          <Chip tone="green">
+                            <Icon name="check" size={10} /> valid
+                          </Chip>
+                        ) : (
+                          <Chip tone="red">
+                            <Icon name="x" size={10} /> invalid
+                          </Chip>
+                        )}
+                      </td>
+                      <td>
+                        <Chip>{event.source}</Chip>
+                      </td>
+                      <td
+                        className="hw-mono hw-num"
+                        style={{ color: "var(--hw-ink-3)", fontSize: 11.5 }}
+                      >
+                        {new Date(event.receivedAt).toLocaleString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                          hour12: false,
+                        })}
+                      </td>
+                      <td style={{ textAlign: "right" }}>
+                        <Link
+                          href={`/events/${event.id}`}
+                          style={{ color: "var(--hw-ink-4)" }}
+                        >
+                          <Icon name="chevron-right" size={14} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </section>
       </div>
-    </div>
+    </>
   );
 }
 
-function ConfigItem({
+function ConfigRow({
   label,
   value,
-  mono,
-  masked,
+  muted,
 }: {
   label: string;
   value: string;
-  mono?: boolean;
-  masked?: boolean;
+  muted?: boolean;
 }) {
   return (
     <div>
-      <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)] mb-1.5">
-        {label}
-      </p>
-      <p
-        className={`text-[13px] break-all ${mono ? "font-mono text-[12px]" : ""} ${
-          masked ? "text-[var(--text-ghost)]" : "text-[var(--text-secondary)]"
-        }`}
+      <div className="hw-label">{label}</div>
+      <div
+        className="hw-mono"
+        style={{
+          marginTop: 6,
+          fontSize: 12.5,
+          color: muted ? "var(--hw-ink-4)" : "var(--hw-ink-2)",
+          wordBreak: "break-all",
+        }}
       >
         {value}
-      </p>
+      </div>
     </div>
   );
 }
 
-function HealthMetric({
+function HealthTile({
   label,
+  value,
   icon,
-  children,
+  iconColor,
 }: {
   label: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
+  value: React.ReactNode;
+  icon: "shield" | "chart" | "stopwatch" | "replay";
+  iconColor?: string;
 }) {
   return (
-    <div className="glass rounded-xl p-4">
-      <div className="flex items-center gap-1.5 mb-3">
-        <span className="text-[var(--text-faint)]">{icon}</span>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          {label}
-        </p>
+    <div
+      className="hw-panel"
+      style={{ padding: "18px 20px", background: "var(--hw-bg-2)" }}
+    >
+      <div className="flex items-start justify-between">
+        <div className="hw-label">{label}</div>
+        <Icon name={icon} size={14} color={iconColor ?? "var(--hw-ink-4)"} />
       </div>
-      {children}
+      <div style={{ marginTop: 10 }}>{value}</div>
     </div>
   );
 }
 
-function CircuitBadgeLarge({ state }: { state: string }) {
-  const config: Record<
-    string,
-    { label: string; color: string; dot: string; glow: string }
-  > = {
-    closed: {
-      label: "Healthy",
-      color: "text-emerald-400",
-      dot: "bg-emerald-400",
-      glow: "glow-green",
-    },
-    half_open: {
-      label: "Degraded",
-      color: "text-amber-400",
-      dot: "bg-amber-400",
-      glow: "glow-amber",
-    },
-    open: {
-      label: "Down",
-      color: "text-red-400",
-      dot: "bg-red-400",
-      glow: "glow-red animate-pulse-glow",
-    },
-  };
-  const { label, color, dot, glow } = config[state] ?? config.closed;
+function MiniStat({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "amber" | "green";
+}) {
+  const color =
+    tone === "amber"
+      ? "var(--hw-amber)"
+      : tone === "green"
+        ? "var(--hw-green)"
+        : "var(--hw-ink)";
   return (
-    <div className={`flex items-center gap-2 ${color}`}>
-      <span className={`w-2.5 h-2.5 rounded-full ${dot} ${glow}`} />
-      <span className="text-lg font-bold">{label}</span>
+    <div>
+      <div className="hw-label">{label}</div>
+      <div
+        className="hw-mono hw-num"
+        style={{ marginTop: 4, fontSize: 15, color, fontWeight: 500 }}
+      >
+        {value}
+      </div>
     </div>
   );
 }

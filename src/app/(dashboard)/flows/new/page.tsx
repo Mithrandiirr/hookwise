@@ -1,10 +1,10 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { db, integrations } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { DashTopbar } from "@/components/hw";
 import { CreateFlowForm } from "./create-flow-form";
 
 export default async function NewFlowPage() {
@@ -23,25 +23,38 @@ export default async function NewFlowPage() {
     .where(eq(integrations.userId, user!.id));
 
   return (
-    <div className="space-y-8 max-w-2xl">
-      <div className="flex items-center gap-4 fade-up">
-        <Link
-          href="/flows"
-          className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:border-[var(--border-strong)] transition-all"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <h1 className="text-[22px] font-bold tracking-tight text-[var(--text-primary)]">
-            Create Flow
-          </h1>
-          <p className="text-[var(--text-tertiary)] text-[13px] mt-0.5">
-            Define a multi-step event chain to track
-          </p>
+    <>
+      <DashTopbar
+        title={
+          <span className="flex items-center" style={{ gap: 10 }}>
+            <Link
+              href="/flows"
+              style={{
+                color: "var(--hw-ink-4)",
+                fontWeight: 500,
+                fontSize: 14,
+              }}
+            >
+              Flows /
+            </Link>
+            <span>New</span>
+          </span>
+        }
+        subtitle="define a multi-step event chain to track by correlation key"
+      />
+      <div
+        className="hw-scroll flex flex-col"
+        style={{
+          padding: "24px 28px 40px",
+          gap: 16,
+          overflow: "auto",
+          flex: 1,
+        }}
+      >
+        <div style={{ maxWidth: 820 }}>
+          <CreateFlowForm integrations={userIntegrations} />
         </div>
       </div>
-
-      <CreateFlowForm integrations={userIntegrations} />
-    </div>
+    </>
   );
 }

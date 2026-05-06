@@ -2,15 +2,12 @@
 
 import { useState } from "react";
 import {
-  Search,
-  AlertTriangle,
-  DollarSign,
-  Activity,
-  Shield,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-} from "lucide-react";
+  Chip,
+  Dot,
+  Icon,
+  ProviderMark,
+  SectionHeader,
+} from "@/components/hw";
 
 interface IntegrationOption {
   id: string;
@@ -67,14 +64,13 @@ export function ScannerClient({
   const [showGaps, setShowGaps] = useState(false);
 
   const filteredIntegrations = integrations.filter(
-    (i) => i.provider === provider
+    (i) => i.provider === provider,
   );
 
   async function handleScan() {
     setLoading(true);
     setError(null);
     setReport(null);
-
     try {
       const res = await fetch("/api/scan", {
         method: "POST",
@@ -86,13 +82,11 @@ export function ScannerClient({
           integrationId: integrationId || undefined,
         }),
       });
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({ error: "Scan failed" }));
         setError(data.error ?? "Scan failed");
         return;
       }
-
       const data: ScanReport = await res.json();
       setReport(data);
     } catch {
@@ -103,9 +97,8 @@ export function ScannerClient({
   }
 
   function handleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortAsc(!sortAsc);
-    } else {
+    if (sortKey === key) setSortAsc(!sortAsc);
+    else {
       setSortKey(key);
       setSortAsc(false);
     }
@@ -116,9 +109,7 @@ export function ScannerClient({
         const aVal = a[sortKey];
         const bVal = b[sortKey];
         if (typeof aVal === "string" && typeof bVal === "string") {
-          return sortAsc
-            ? aVal.localeCompare(bVal)
-            : bVal.localeCompare(aVal);
+          return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
         }
         return sortAsc
           ? (aVal as number) - (bVal as number)
@@ -127,51 +118,64 @@ export function ScannerClient({
     : [];
 
   return (
-    <div className="space-y-6">
-      {/* Scan Form */}
-      <div className="glass rounded-xl p-6 fade-up fade-up-1">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-1 h-4 rounded-full bg-indigo-500" />
-          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-            Configure Scan
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {/* Provider */}
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] mb-2">
-              Provider
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setProvider("stripe")}
-                className={`flex-1 px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all ${
-                  provider === "stripe"
-                    ? "bg-violet-500/15 text-violet-400 border border-violet-500/30"
-                    : "bg-[var(--bg-surface)] text-[var(--text-tertiary)] border border-[var(--border-default)] hover:border-[var(--border-strong)]"
-                }`}
-              >
-                Stripe
-              </button>
-              <button
-                onClick={() => setProvider("shopify")}
-                className={`flex-1 px-4 py-2.5 rounded-lg text-[13px] font-medium transition-all ${
-                  provider === "shopify"
-                    ? "bg-green-500/15 text-green-400 border border-green-500/30"
-                    : "bg-[var(--bg-surface)] text-[var(--text-tertiary)] border border-[var(--border-default)] hover:border-[var(--border-strong)]"
-                }`}
-              >
-                Shopify
-              </button>
+    <div className="flex flex-col" style={{ gap: 20 }}>
+      {/* Configure */}
+      <div
+        className="hw-fade-up hw-panel"
+        style={{ padding: 22, background: "var(--hw-bg-2)" }}
+      >
+        <SectionHeader title="Configure scan" />
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: "1fr 1fr",
+            gap: 14,
+            marginTop: 14,
+          }}
+        >
+          <Field label="Provider">
+            <div className="flex" style={{ gap: 8 }}>
+              {(["stripe", "shopify"] as const).map((p) => {
+                const on = provider === p;
+                return (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setProvider(p)}
+                    className="flex items-center"
+                    style={{
+                      flex: 1,
+                      gap: 8,
+                      padding: "10px 12px",
+                      borderRadius: 8,
+                      border: on
+                        ? "1px solid rgba(129,140,248,0.4)"
+                        : "1px solid var(--hw-line-2)",
+                      background: on
+                        ? "rgba(129,140,248,0.1)"
+                        : "var(--hw-bg-3)",
+                      color: on ? "var(--hw-indigo-ink)" : "var(--hw-ink-2)",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      textTransform: "capitalize",
+                      cursor: "pointer",
+                      transition: "all 150ms",
+                    }}
+                  >
+                    <ProviderMark provider={p} size={16} />
+                    {p}
+                  </button>
+                );
+              })}
             </div>
-          </div>
-
-          {/* API Key */}
-          <div>
-            <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] mb-2">
-              {provider === "stripe" ? "Stripe Secret Key" : "Shopify Access Token"}
-            </label>
+          </Field>
+          <Field
+            label={
+              provider === "stripe"
+                ? "Stripe secret key"
+                : "Shopify access token"
+            }
+          >
             <input
               type="password"
               value={apiKey}
@@ -179,36 +183,26 @@ export function ScannerClient({
               placeholder={
                 provider === "stripe" ? "sk_test_..." : "shpat_..."
               }
-              className="w-full px-4 py-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-secondary)] text-[13px] font-mono placeholder:text-[var(--text-ghost)] focus:outline-none focus:border-indigo-500/50 transition-colors"
+              className="hw-input hw-mono"
             />
-          </div>
-
-          {/* Shop Domain (Shopify only) */}
+          </Field>
           {provider === "shopify" && (
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] mb-2">
-                Shop Domain
-              </label>
+            <Field label="Shop domain">
               <input
                 type="text"
                 value={shopDomain}
                 onChange={(e) => setShopDomain(e.target.value)}
                 placeholder="your-store.myshopify.com"
-                className="w-full px-4 py-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-secondary)] text-[13px] font-mono placeholder:text-[var(--text-ghost)] focus:outline-none focus:border-indigo-500/50 transition-colors"
+                className="hw-input hw-mono"
               />
-            </div>
+            </Field>
           )}
-
-          {/* Compare against integration */}
           {filteredIntegrations.length > 0 && (
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] mb-2">
-                Compare Against (optional)
-              </label>
+            <Field label="Compare against (optional)">
               <select
                 value={integrationId}
                 onChange={(e) => setIntegrationId(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] text-[var(--text-secondary)] text-[13px] focus:outline-none focus:border-indigo-500/50 transition-colors"
+                className="hw-input"
               >
                 <option value="">No comparison — show all events</option>
                 {filteredIntegrations.map((i) => (
@@ -217,89 +211,111 @@ export function ScannerClient({
                   </option>
                 ))}
               </select>
-            </div>
+            </Field>
           )}
         </div>
 
-        {/* Scan Button */}
-        <div className="mt-6">
+        <div
+          className="flex items-center"
+          style={{ marginTop: 18, gap: 14 }}
+        >
           <button
+            type="button"
             onClick={handleScan}
             disabled={loading || !apiKey}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-indigo-500 text-white text-[13px] font-semibold hover:bg-indigo-400 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            className="hw-btn hw-btn-primary"
+            style={{
+              opacity: loading || !apiKey ? 0.5 : 1,
+              cursor: loading || !apiKey ? "not-allowed" : "pointer",
+            }}
           >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Scanning...
-              </>
-            ) : (
-              <>
-                <Search className="h-4 w-4" />
-                Run Scan
-              </>
-            )}
+            <Icon name="search" size={13} />
+            {loading ? "Scanning…" : "Run scan"}
           </button>
+          {error && (
+            <span
+              className="hw-mono"
+              style={{ fontSize: 12, color: "var(--hw-red)" }}
+            >
+              {error}
+            </span>
+          )}
         </div>
-
-        {error && (
-          <div className="mt-4 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
-            <p className="text-[13px] text-red-400">{error}</p>
-          </div>
-        )}
       </div>
 
-      {/* Loading State */}
       {loading && (
-        <div className="glass rounded-xl p-16 text-center fade-up">
-          <Loader2 className="h-8 w-8 text-indigo-400 animate-spin mx-auto mb-4" />
-          <p className="text-[var(--text-secondary)] text-[15px] font-medium">
-            Scanning your {provider} account...
-          </p>
-          <p className="text-[var(--text-faint)] text-[13px] mt-1">
-            This may take a moment for large accounts
-          </p>
+        <div
+          className="hw-panel hw-fade-up"
+          style={{
+            padding: 48,
+            background: "var(--hw-bg-2)",
+            textAlign: "center",
+          }}
+        >
+          <Dot tone="indigo" />
+          <div
+            className="hw-mono"
+            style={{ marginTop: 10, color: "var(--hw-ink-2)" }}
+          >
+            Scanning your {provider} account…
+          </div>
+          <div
+            className="hw-mono"
+            style={{ marginTop: 4, fontSize: 11, color: "var(--hw-ink-4)" }}
+          >
+            this may take a moment for large accounts
+          </div>
         </div>
       )}
 
-      {/* Results */}
       {report && !loading && (
-        <div className="space-y-6 fade-up">
+        <div
+          className="hw-fade-up flex flex-col"
+          style={{ gap: 20 }}
+        >
           {report.truncated && (
-            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
-              <p className="text-[13px] text-amber-400">
-                Your account has more than 10,000 events. Results show the first
-                10,000 events only.
-              </p>
+            <div
+              className="hw-mono hw-panel"
+              style={{
+                padding: "10px 14px",
+                fontSize: 12,
+                color: "var(--hw-amber)",
+                background: "rgba(251,191,36,0.06)",
+                borderColor: "rgba(251,191,36,0.22)",
+              }}
+            >
+              Account has more than 10,000 events. Showing the first 10,000.
             </div>
           )}
 
-          {/* Stat Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 fade-up fade-up-1">
-            <StatCard
-              icon={<Activity className="h-4 w-4 text-indigo-400" />}
-              label="Total Events"
+          <div
+            className="grid"
+            style={{ gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}
+          >
+            <Stat
+              label="Total events"
               value={report.totalProviderEvents.toLocaleString()}
+              icon="activity"
             />
-            <StatCard
-              icon={<AlertTriangle className="h-4 w-4 text-red-400" />}
-              label="Gaps Found"
+            <Stat
+              label="Gaps found"
               value={report.gapsFound.toLocaleString()}
-              accent={report.gapsFound > 0 ? "red" : undefined}
+              icon="alert"
+              tone={report.gapsFound > 0 ? "red" : undefined}
             />
-            <StatCard
-              icon={<DollarSign className="h-4 w-4 text-amber-400" />}
-              label="$ At Risk"
+            <Stat
+              label="At risk"
               value={formatDollars(report.dollarAtRiskCents)}
-              accent={report.dollarAtRiskCents > 0 ? "amber" : undefined}
+              icon="dollar"
+              tone={report.dollarAtRiskCents > 0 ? "amber" : undefined}
             />
-            <StatCard
-              icon={<Shield className="h-4 w-4 text-emerald-400" />}
-              label="Health Score"
+            <Stat
+              label="Health"
               value={`${report.healthScore}%`}
-              accent={
+              icon="shield"
+              tone={
                 report.healthScore >= 95
-                  ? "emerald"
+                  ? "green"
                   : report.healthScore >= 80
                     ? "amber"
                     : "red"
@@ -307,142 +323,186 @@ export function ScannerClient({
             />
           </div>
 
-          {/* Event Type Breakdown */}
-          <div className="fade-up fade-up-2">
-            <div className="flex items-center gap-2 mb-5">
-              <div className="w-1 h-4 rounded-full bg-indigo-500" />
-              <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-                Event Type Breakdown
-              </h2>
+          <div
+            className="hw-panel overflow-hidden"
+            style={{ background: "var(--hw-bg-2)" }}
+          >
+            <div
+              style={{
+                padding: "14px 20px",
+                borderBottom: "1px solid var(--hw-line)",
+              }}
+            >
+              <SectionHeader title="Event type breakdown" />
             </div>
-            <div className="glass rounded-xl overflow-hidden">
-              <table className="w-full text-[13px]">
-                <thead>
-                  <tr className="border-b border-[var(--border-default)]">
-                    <SortHeader
-                      label="Event Type"
-                      sortKey="eventType"
-                      currentSort={sortKey}
-                      asc={sortAsc}
-                      onClick={handleSort}
-                    />
-                    <SortHeader
-                      label="Total"
-                      sortKey="totalCount"
-                      currentSort={sortKey}
-                      asc={sortAsc}
-                      onClick={handleSort}
-                    />
-                    <SortHeader
-                      label="Gaps"
-                      sortKey="gapCount"
-                      currentSort={sortKey}
-                      asc={sortAsc}
-                      onClick={handleSort}
-                    />
-                    <SortHeader
-                      label="$ Impact"
-                      sortKey="dollarImpactCents"
-                      currentSort={sortKey}
-                      asc={sortAsc}
-                      onClick={handleSort}
-                    />
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedBreakdown.map((row) => (
-                    <tr
-                      key={row.eventType}
-                      className="border-b border-[var(--border-subtle)] last:border-0"
+            <table className="hw-table">
+              <thead>
+                <tr>
+                  <SortTh
+                    label="Event type"
+                    sortKey="eventType"
+                    currentSort={sortKey}
+                    asc={sortAsc}
+                    onClick={handleSort}
+                  />
+                  <SortTh
+                    label="Total"
+                    sortKey="totalCount"
+                    currentSort={sortKey}
+                    asc={sortAsc}
+                    onClick={handleSort}
+                  />
+                  <SortTh
+                    label="Gaps"
+                    sortKey="gapCount"
+                    currentSort={sortKey}
+                    asc={sortAsc}
+                    onClick={handleSort}
+                  />
+                  <SortTh
+                    label="$ Impact"
+                    sortKey="dollarImpactCents"
+                    currentSort={sortKey}
+                    asc={sortAsc}
+                    onClick={handleSort}
+                  />
+                </tr>
+              </thead>
+              <tbody>
+                {sortedBreakdown.map((row) => (
+                  <tr key={row.eventType}>
+                    <td
+                      className="hw-mono"
+                      style={{ fontSize: 12, color: "var(--hw-indigo-ink)" }}
                     >
-                      <td className="px-5 py-3.5 font-mono text-[12px] text-indigo-400">
-                        {row.eventType}
-                      </td>
-                      <td className="px-5 py-3.5 text-[var(--text-secondary)] tabular-nums">
-                        {row.totalCount.toLocaleString()}
-                      </td>
-                      <td className="px-5 py-3.5 tabular-nums">
-                        <span
-                          className={
+                      {row.eventType}
+                    </td>
+                    <td
+                      className="hw-mono hw-num"
+                      style={{ color: "var(--hw-ink-2)" }}
+                    >
+                      {row.totalCount.toLocaleString()}
+                    </td>
+                    <td className="hw-mono hw-num">
+                      <span
+                        style={{
+                          color:
                             row.gapCount > 0
-                              ? "text-red-400"
-                              : "text-[var(--text-tertiary)]"
-                          }
-                        >
-                          {row.gapCount.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 tabular-nums">
-                        <span
-                          className={
-                            row.dollarImpactCents > 0
-                              ? "text-amber-400 font-medium"
-                              : "text-[var(--text-tertiary)]"
-                          }
-                        >
-                          {formatDollars(row.dollarImpactCents)}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                  {sortedBreakdown.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="px-5 py-8 text-center text-[var(--text-tertiary)]"
+                              ? "var(--hw-red)"
+                              : "var(--hw-ink-3)",
+                        }}
                       >
-                        No events found in the last 30 days
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        {row.gapCount.toLocaleString()}
+                      </span>
+                    </td>
+                    <td className="hw-mono hw-num">
+                      <span
+                        style={{
+                          color:
+                            row.dollarImpactCents > 0
+                              ? "var(--hw-amber)"
+                              : "var(--hw-ink-3)",
+                          fontWeight: row.dollarImpactCents > 0 ? 500 : 400,
+                        }}
+                      >
+                        {formatDollars(row.dollarImpactCents)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {sortedBreakdown.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      style={{
+                        textAlign: "center",
+                        color: "var(--hw-ink-4)",
+                        padding: "32px 16px",
+                      }}
+                    >
+                      No events found in the last 30 days.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
 
-          {/* Top Gaps */}
           {report.topGaps.length > 0 && (
-            <div className="fade-up fade-up-3">
+            <div
+              className="hw-panel overflow-hidden"
+              style={{ background: "var(--hw-bg-2)" }}
+            >
               <button
+                type="button"
                 onClick={() => setShowGaps(!showGaps)}
-                className="flex items-center gap-2 mb-5 group"
+                className="flex items-center w-full"
+                style={{
+                  padding: "14px 20px",
+                  borderBottom: showGaps
+                    ? "1px solid var(--hw-line)"
+                    : "none",
+                  gap: 10,
+                  textAlign: "left",
+                }}
               >
-                <div className="w-1 h-4 rounded-full bg-red-500" />
-                <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-                  Top Missed Events
-                </h2>
-                <span className="text-[11px] text-[var(--text-faint)] ml-1">
-                  ({report.topGaps.length})
+                <Dot tone="red" />
+                <span className="hw-label">
+                  TOP MISSED EVENTS · {report.topGaps.length}
                 </span>
-                {showGaps ? (
-                  <ChevronUp className="h-4 w-4 text-[var(--text-faint)]" />
-                ) : (
-                  <ChevronDown className="h-4 w-4 text-[var(--text-faint)]" />
-                )}
+                <Icon
+                  name={showGaps ? "chevron-down" : "chevron-right"}
+                  size={13}
+                  color="var(--hw-ink-4)"
+                  style={{ marginLeft: "auto" }}
+                />
               </button>
-
               {showGaps && (
-                <div className="space-y-2">
-                  {report.topGaps.map((gap) => (
+                <div>
+                  {report.topGaps.map((gap, i) => (
                     <div
                       key={gap.providerEventId}
-                      className="glass rounded-xl p-4 flex items-center gap-4"
+                      className="flex items-center"
+                      style={{
+                        padding: "12px 20px",
+                        gap: 12,
+                        borderTop: i ? "1px solid var(--hw-line)" : "none",
+                      }}
                     >
-                      <span className="w-2 h-2 rounded-full bg-red-400 glow-red shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[12px] font-mono text-indigo-400">
+                      <Dot tone="red" quiet />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span
+                          className="hw-mono"
+                          style={{
+                            fontSize: 12,
+                            color: "var(--hw-indigo-ink)",
+                          }}
+                        >
                           {gap.eventType}
                         </span>
-                        <span className="text-[11px] text-[var(--text-faint)] ml-3">
+                        <span
+                          className="hw-mono"
+                          style={{
+                            marginLeft: 10,
+                            fontSize: 11,
+                            color: "var(--hw-ink-4)",
+                          }}
+                        >
                           {gap.providerEventId}
                         </span>
                       </div>
                       {gap.amountCents > 0 && (
-                        <span className="text-[12px] text-amber-400 font-medium tabular-nums shrink-0">
+                        <Chip tone="amber">
                           {formatDollars(gap.amountCents)}
-                        </span>
+                        </Chip>
                       )}
-                      <span className="text-[11px] text-[var(--text-ghost)] tabular-nums shrink-0">
+                      <span
+                        className="hw-mono hw-num"
+                        style={{
+                          fontSize: 11,
+                          color: "var(--hw-ink-4)",
+                        }}
+                      >
                         {new Date(gap.createdAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -453,46 +513,96 @@ export function ScannerClient({
           )}
         </div>
       )}
+      <style jsx>{`
+        :global(.hw-input) {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 8px;
+          background: var(--hw-bg-3);
+          border: 1px solid var(--hw-line-2);
+          color: var(--hw-ink);
+          font-size: 13px;
+          transition: all 150ms;
+        }
+        :global(.hw-input:focus) {
+          outline: none;
+          border-color: rgba(129, 140, 248, 0.4);
+          box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.08);
+        }
+        :global(.hw-input::placeholder) {
+          color: var(--hw-ink-5);
+        }
+      `}</style>
     </div>
   );
 }
 
-function StatCard({
-  icon,
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="hw-label" style={{ display: "block", marginBottom: 8 }}>
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function Stat({
   label,
   value,
-  accent,
+  icon,
+  tone,
 }: {
-  icon: React.ReactNode;
   label: string;
   value: string;
-  accent?: "red" | "amber" | "emerald";
+  icon: "activity" | "alert" | "dollar" | "shield";
+  tone?: "red" | "amber" | "green";
 }) {
-  const valueColor =
-    accent === "red"
-      ? "text-red-400"
-      : accent === "amber"
-        ? "text-amber-400"
-        : accent === "emerald"
-          ? "text-emerald-400"
-          : "text-[var(--text-primary)]";
-
+  const color =
+    tone === "red"
+      ? "var(--hw-red)"
+      : tone === "amber"
+        ? "var(--hw-amber)"
+        : tone === "green"
+          ? "var(--hw-green)"
+          : "var(--hw-ink)";
+  const iconColor =
+    tone === "red"
+      ? "var(--hw-red)"
+      : tone === "amber"
+        ? "var(--hw-amber)"
+        : tone === "green"
+          ? "var(--hw-green)"
+          : "var(--hw-indigo-ink)";
   return (
-    <div className="glass rounded-xl p-5">
-      <div className="flex items-center gap-2 mb-2">
-        {icon}
-        <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-          {label}
-        </span>
+    <div
+      className="hw-panel"
+      style={{ padding: "18px 20px", background: "var(--hw-bg-2)" }}
+    >
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="hw-label">{label}</div>
+          <div
+            className="hw-mono hw-num"
+            style={{ fontSize: 26, fontWeight: 500, marginTop: 6, color }}
+          >
+            {value}
+          </div>
+        </div>
+        <Icon name={icon} size={16} color={iconColor} />
       </div>
-      <p className={`text-3xl font-bold tabular-nums stat-value ${valueColor}`}>
-        {value}
-      </p>
     </div>
   );
 }
 
-function SortHeader({
+function SortTh({
   label,
   sortKey,
   currentSort,
@@ -509,16 +619,17 @@ function SortHeader({
   return (
     <th
       onClick={() => onClick(sortKey)}
-      className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)] cursor-pointer hover:text-[var(--text-tertiary)] transition-colors select-none"
+      style={{ cursor: "pointer", userSelect: "none" }}
     >
-      <span className="inline-flex items-center gap-1">
+      <span className="inline-flex items-center" style={{ gap: 4 }}>
         {label}
-        {active &&
-          (asc ? (
-            <ChevronUp className="h-3 w-3" />
-          ) : (
-            <ChevronDown className="h-3 w-3" />
-          ))}
+        {active && (
+          <Icon
+            name={asc ? "chevron-down" : "chevron-right"}
+            size={11}
+            color="var(--hw-ink-4)"
+          />
+        )}
       </span>
     </th>
   );

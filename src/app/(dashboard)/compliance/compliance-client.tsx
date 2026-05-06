@@ -1,16 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import {
-  FileCheck,
-  Download,
-  ShieldCheck,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Filter,
-} from "lucide-react";
 import type { AuditAction, ComplianceFormat } from "@/types";
+import { Chip, Dot, Icon, DashTopbar, SectionHeader } from "@/components/hw";
 
 interface AuditEntry {
   id: string;
@@ -32,19 +24,19 @@ interface ExportEntry {
   createdAt: Date | string;
 }
 
-const ACTION_COLORS: Record<string, { bg: string; text: string }> = {
-  "event.received": { bg: "bg-indigo-500/10", text: "text-indigo-400" },
-  "event.delivered": { bg: "bg-emerald-500/10", text: "text-emerald-400" },
-  "event.failed": { bg: "bg-red-500/10", text: "text-red-400" },
-  "event.replayed": { bg: "bg-amber-500/10", text: "text-amber-400" },
-  "circuit.opened": { bg: "bg-red-500/10", text: "text-red-400" },
-  "circuit.closed": { bg: "bg-emerald-500/10", text: "text-emerald-400" },
-  "circuit.half_open": { bg: "bg-amber-500/10", text: "text-amber-400" },
-  "integration.created": { bg: "bg-indigo-500/10", text: "text-indigo-400" },
-  "integration.updated": { bg: "bg-indigo-500/10", text: "text-indigo-400" },
-  "integration.deleted": { bg: "bg-red-500/10", text: "text-red-400" },
-  "scan.completed": { bg: "bg-indigo-500/10", text: "text-indigo-400" },
-  "export.created": { bg: "bg-indigo-500/10", text: "text-indigo-400" },
+const ACTION_TONE: Record<string, "green" | "amber" | "red" | "indigo"> = {
+  "event.received": "indigo",
+  "event.delivered": "green",
+  "event.failed": "red",
+  "event.replayed": "amber",
+  "circuit.opened": "red",
+  "circuit.closed": "green",
+  "circuit.half_open": "amber",
+  "integration.created": "indigo",
+  "integration.updated": "indigo",
+  "integration.deleted": "red",
+  "scan.completed": "indigo",
+  "export.created": "indigo",
 };
 
 const ALL_ACTIONS: AuditAction[] = [
@@ -70,42 +62,15 @@ interface ComplianceStatus {
   securityScanningEnabled: boolean;
 }
 
-function complianceScore(status: ComplianceStatus): number {
+function complianceScore(s: ComplianceStatus): number {
   const checks = [
-    status.auditLogEnabled,
-    status.integrityHashingEnabled,
-    status.exportCapability,
-    status.dataRetentionConfigured,
-    status.securityScanningEnabled,
+    s.auditLogEnabled,
+    s.integrityHashingEnabled,
+    s.exportCapability,
+    s.dataRetentionConfigured,
+    s.securityScanningEnabled,
   ];
-  const passed = checks.filter(Boolean).length;
-  return Math.round((passed / checks.length) * 100);
-}
-
-function ComplianceCheck({
-  label,
-  requirement,
-  passed,
-}: {
-  label: string;
-  requirement: string;
-  passed: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-3 py-2">
-      {passed ? (
-        <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
-      ) : (
-        <XCircle className="h-4 w-4 text-red-400 shrink-0" />
-      )}
-      <div className="min-w-0">
-        <p className={`text-[13px] font-medium ${passed ? "text-[var(--text-secondary)]" : "text-red-400/80"}`}>
-          {label}
-        </p>
-        <p className="text-[11px] text-[var(--text-muted)]">{requirement}</p>
-      </div>
-    </div>
-  );
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
 
 export function ComplianceClient({
@@ -135,6 +100,8 @@ export function ComplianceClient({
     filterAction === "all"
       ? auditEntries
       : auditEntries.filter((e) => e.action === filterAction);
+  const score = complianceScore(complianceStatus);
+  const scoreTone = score === 100 ? "green" : score >= 60 ? "amber" : "red";
 
   async function handleExport() {
     if (!exportStart || !exportEnd) return;
@@ -151,7 +118,6 @@ export function ComplianceClient({
       });
       if (res.ok) {
         const result = await res.json();
-        // Download the data
         const blob = new Blob([result.data], {
           type: exportFormat === "csv" ? "text/csv" : "application/json",
         });
@@ -172,333 +138,505 @@ export function ComplianceClient({
     setVerifyResult(null);
     try {
       const res = await fetch("/api/compliance/verify", { method: "POST" });
-      if (res.ok) {
-        const result = await res.json();
-        setVerifyResult(result);
-      }
+      if (res.ok) setVerifyResult(await res.json());
     } finally {
       setVerifying(false);
     }
   }
 
   return (
-    <div className="space-y-8">
-      <div className="fade-up">
-        <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
-          Compliance
-        </h1>
-        <p className="text-[var(--text-tertiary)] mt-1 text-[15px]">
-          Immutable audit trail with integrity verification
-        </p>
-      </div>
-
-      {/* Export + Verify Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 fade-up fade-up-1">
-        {/* Export Panel */}
-        <div className="glass rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <Download className="h-4 w-4 text-indigo-400" />
-            <span className="text-[13px] font-semibold text-[var(--text-primary)]">
-              Export Audit Trail
-            </span>
-          </div>
-          <div className="space-y-3">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <label className="text-[11px] text-[var(--text-muted)] block mb-1">
-                  From
-                </label>
+    <>
+      <DashTopbar
+        title="Compliance"
+        subtitle="immutable audit trail with cryptographic integrity"
+        right={
+          <Chip tone={scoreTone}>
+            <Dot tone={scoreTone} quiet />
+            {score}% compliance
+          </Chip>
+        }
+      />
+      <div
+        className="hw-scroll flex flex-col"
+        style={{
+          padding: "24px 28px 40px",
+          gap: 20,
+          overflow: "auto",
+          flex: 1,
+        }}
+      >
+        {/* Export + verify */}
+        <section
+          className="hw-fade-up grid"
+          style={{ gridTemplateColumns: "1fr 1fr", gap: 16 }}
+        >
+          <div
+            className="hw-panel"
+            style={{ padding: 22, background: "var(--hw-bg-2)" }}
+          >
+            <div
+              className="flex items-center"
+              style={{ gap: 10, marginBottom: 14 }}
+            >
+              <Icon name="copy" size={14} color="var(--hw-indigo-ink)" />
+              <SectionHeader title="Export audit trail" />
+            </div>
+            <div
+              className="grid"
+              style={{ gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 12 }}
+            >
+              <Field label="From">
                 <input
                   type="date"
                   value={exportStart}
                   onChange={(e) => setExportStart(e.target.value)}
-                  className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-[12px] text-[var(--text-secondary)] focus:outline-none focus:border-indigo-500/30"
+                  className="hw-input hw-mono"
                 />
-              </div>
-              <div className="flex-1">
-                <label className="text-[11px] text-[var(--text-muted)] block mb-1">
-                  To
-                </label>
+              </Field>
+              <Field label="To">
                 <input
                   type="date"
                   value={exportEnd}
                   onChange={(e) => setExportEnd(e.target.value)}
-                  className="w-full bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-[12px] text-[var(--text-secondary)] focus:outline-none focus:border-indigo-500/30"
+                  className="hw-input hw-mono"
                 />
-              </div>
+              </Field>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center" style={{ gap: 10 }}>
               <select
                 value={exportFormat}
                 onChange={(e) =>
                   setExportFormat(e.target.value as ComplianceFormat)
                 }
-                className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg px-3 py-2 text-[12px] text-[var(--text-secondary)] focus:outline-none focus:border-indigo-500/30"
+                className="hw-input"
+                style={{ width: 120 }}
               >
                 <option value="json">JSON</option>
                 <option value="csv">CSV</option>
               </select>
               <button
+                type="button"
                 onClick={handleExport}
                 disabled={exporting || !exportStart || !exportEnd}
-                className="flex-1 px-4 py-2 text-[12px] font-medium bg-indigo-500/15 text-indigo-400 hover:bg-indigo-500/25 rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                className="hw-btn hw-btn-indigo"
+                style={{
+                  flex: 1,
+                  justifyContent: "center",
+                  opacity:
+                    exporting || !exportStart || !exportEnd ? 0.5 : 1,
+                }}
               >
-                {exporting ? "Generating..." : "Generate Export"}
+                {exporting ? "Generating…" : "Generate export"}
               </button>
             </div>
           </div>
-        </div>
 
-        {/* Verify Panel */}
-        <div className="glass rounded-xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <ShieldCheck className="h-4 w-4 text-emerald-400" />
-            <span className="text-[13px] font-semibold text-[var(--text-primary)]">
-              Integrity Verification
-            </span>
-          </div>
-          <p className="text-[12px] text-[var(--text-tertiary)] mb-4">
-            Verify the cryptographic chain of your audit trail to detect any
-            tampering or missing entries.
-          </p>
-          <button
-            onClick={handleVerify}
-            disabled={verifying}
-            className="w-full px-4 py-2.5 text-[12px] font-medium bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 rounded-lg transition-all disabled:opacity-40"
+          <div
+            className="hw-panel"
+            style={{ padding: 22, background: "var(--hw-bg-2)" }}
           >
-            {verifying ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-3 h-3 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
-                Verifying...
-              </span>
-            ) : (
-              "Verify Integrity"
-            )}
-          </button>
-          {verifyResult && (
             <div
-              className={`mt-4 p-3 rounded-lg border ${
-                verifyResult.valid
-                  ? "bg-emerald-500/5 border-emerald-500/10"
-                  : "bg-red-500/5 border-red-500/10"
-              }`}
+              className="flex items-center"
+              style={{ gap: 10, marginBottom: 14 }}
             >
-              <div className="flex items-center gap-2">
-                {verifyResult.valid ? (
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                ) : (
-                  <XCircle className="h-4 w-4 text-red-400" />
-                )}
-                <span
-                  className={`text-[13px] font-medium ${
-                    verifyResult.valid ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {verifyResult.valid
-                    ? "Chain verified"
-                    : "Chain integrity broken"}
-                </span>
-              </div>
-              <p className="text-[11px] text-[var(--text-tertiary)] mt-1">
-                {verifyResult.checked} entries checked
-                {verifyResult.firstBrokenId &&
-                  ` — first broken at ${verifyResult.firstBrokenId.slice(0, 8)}...`}
-              </p>
+              <Icon name="shield" size={14} color="var(--hw-green)" />
+              <SectionHeader title="Integrity verification" />
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* PCI DSS Readiness */}
-      <div className="fade-up fade-up-2">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-1 h-4 rounded-full bg-indigo-500" />
-          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-            PCI DSS Readiness
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          <div className="glass rounded-xl p-5 lg:col-span-2">
-            <ComplianceCheck
-              label="Audit Trail Active"
-              requirement="Req 10.2 — Implement automated audit trails"
-              passed={complianceStatus.auditLogEnabled}
-            />
-            <ComplianceCheck
-              label="Integrity Hashing"
-              requirement="Req 10.5 — Secure audit trails so they cannot be altered"
-              passed={complianceStatus.integrityHashingEnabled}
-            />
-            <ComplianceCheck
-              label="Export Capability"
-              requirement="Req 10.7 — Retain audit trail history for at least one year"
-              passed={complianceStatus.exportCapability}
-            />
-            <ComplianceCheck
-              label="Data Retention Configured"
-              requirement="Req 3.1 — Keep cardholder data storage to a minimum"
-              passed={complianceStatus.dataRetentionConfigured}
-            />
-            <ComplianceCheck
-              label="Security Scanning"
-              requirement="Req 11.2 — Run vulnerability scans at least quarterly"
-              passed={complianceStatus.securityScanningEnabled}
-            />
-          </div>
-          <div className="glass rounded-xl p-5 flex flex-col items-center justify-center">
-            <div className="text-5xl font-bold tabular-nums text-[var(--text-primary)] mb-2">
-              {complianceScore(complianceStatus)}
-              <span className="text-2xl text-[var(--text-tertiary)]">%</span>
+            <div
+              style={{
+                fontSize: 12.5,
+                color: "var(--hw-ink-3)",
+                lineHeight: 1.55,
+                marginBottom: 14,
+              }}
+            >
+              Walk the cryptographic chain across every audit entry. A break detects
+              tampering or a missing record.
             </div>
-            <p className="text-[12px] text-[var(--text-tertiary)] text-center">
-              Compliance Score
-            </p>
-            <div className="w-full mt-4 bg-[var(--bg-surface-hover)] rounded-full h-2 overflow-hidden">
+            <button
+              type="button"
+              onClick={handleVerify}
+              disabled={verifying}
+              className="hw-btn"
+              style={{
+                width: "100%",
+                justifyContent: "center",
+                background: "rgba(74,222,128,0.1)",
+                color: "var(--hw-green)",
+                border: "1px solid rgba(74,222,128,0.25)",
+                opacity: verifying ? 0.6 : 1,
+              }}
+            >
+              {verifying ? "Verifying…" : "Verify integrity"}
+            </button>
+            {verifyResult && (
               <div
-                className={`h-2 rounded-full transition-all ${
-                  complianceScore(complianceStatus) === 100
-                    ? "bg-emerald-400"
-                    : complianceScore(complianceStatus) >= 60
-                      ? "bg-amber-400"
-                      : "bg-red-400"
-                }`}
-                style={{ width: `${complianceScore(complianceStatus)}%` }}
-              />
-            </div>
+                className="hw-mono"
+                style={{
+                  marginTop: 12,
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  background: verifyResult.valid
+                    ? "rgba(74,222,128,0.06)"
+                    : "rgba(248,113,113,0.06)",
+                  border: verifyResult.valid
+                    ? "1px solid rgba(74,222,128,0.22)"
+                    : "1px solid rgba(248,113,113,0.22)",
+                  fontSize: 12,
+                  color: verifyResult.valid
+                    ? "var(--hw-green)"
+                    : "var(--hw-red)",
+                }}
+              >
+                {verifyResult.valid ? "chain verified" : "chain broken"} ·{" "}
+                <span style={{ color: "var(--hw-ink-3)" }}>
+                  {verifyResult.checked} entries checked
+                </span>
+                {verifyResult.firstBrokenId && (
+                  <span style={{ color: "var(--hw-ink-3)" }}>
+                    {" "}
+                    · first broken at {verifyResult.firstBrokenId.slice(0, 8)}…
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* Audit Timeline */}
-      <div className="fade-up fade-up-3">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-4 rounded-full bg-indigo-500" />
-            <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-              Audit Timeline
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="h-3.5 w-3.5 text-[var(--text-faint)]" />
-            <select
-              value={filterAction}
-              onChange={(e) => setFilterAction(e.target.value)}
-              className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-lg px-3 py-1.5 text-[11px] text-[var(--text-secondary)] focus:outline-none focus:border-indigo-500/30"
+        {/* PCI DSS */}
+        <section className="hw-fade-up hw-fade-up-1">
+          <div
+            className="grid"
+            style={{ gridTemplateColumns: "2fr 1fr", gap: 16 }}
+          >
+            <div
+              className="hw-panel"
+              style={{ padding: 22, background: "var(--hw-bg-2)" }}
             >
-              <option value="all">All actions</option>
-              {ALL_ACTIONS.map((a) => (
-                <option key={a} value={a}>
-                  {a}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {filteredEntries.length === 0 ? (
-          <div className="glass rounded-xl p-16 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--bg-surface)] mb-4">
-              <FileCheck className="h-6 w-6 text-[var(--text-faint)]" />
+              <SectionHeader title="PCI DSS readiness" />
+              <div
+                className="flex flex-col"
+                style={{ gap: 4, marginTop: 14 }}
+              >
+                <ComplianceCheck
+                  label="Audit trail active"
+                  requirement="Req 10.2 — automated audit trails"
+                  passed={complianceStatus.auditLogEnabled}
+                />
+                <ComplianceCheck
+                  label="Integrity hashing"
+                  requirement="Req 10.5 — secure audit trails so they cannot be altered"
+                  passed={complianceStatus.integrityHashingEnabled}
+                />
+                <ComplianceCheck
+                  label="Export capability"
+                  requirement="Req 10.7 — retain audit history ≥ 1 year"
+                  passed={complianceStatus.exportCapability}
+                />
+                <ComplianceCheck
+                  label="Data retention"
+                  requirement="Req 3.1 — minimize cardholder data storage"
+                  passed={complianceStatus.dataRetentionConfigured}
+                />
+                <ComplianceCheck
+                  label="Security scanning"
+                  requirement="Req 11.2 — vulnerability scans ≥ quarterly"
+                  passed={complianceStatus.securityScanningEnabled}
+                />
+              </div>
             </div>
-            <p className="text-[var(--text-secondary)] font-medium text-[15px]">
-              No audit entries yet
-            </p>
-            <p className="text-[var(--text-faint)] text-sm mt-1 max-w-sm mx-auto">
-              Audit entries will appear here as events flow through your
-              integrations.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {filteredEntries.map((entry) => {
-              const colors = ACTION_COLORS[entry.action] ?? {
-                bg: "bg-[var(--bg-surface)]",
-                text: "text-[var(--text-tertiary)]",
-              };
 
-              return (
+            <div
+              className="hw-panel flex flex-col items-center justify-center"
+              style={{
+                padding: 28,
+                background: "var(--hw-bg-2)",
+                textAlign: "center",
+              }}
+            >
+              <div
+                className="hw-mono hw-num"
+                style={{
+                  fontSize: 56,
+                  fontWeight: 500,
+                  color: `var(--hw-${scoreTone})`,
+                  letterSpacing: "-0.04em",
+                }}
+              >
+                {score}
+                <span style={{ fontSize: 22, color: "var(--hw-ink-4)" }}>%</span>
+              </div>
+              <div
+                className="hw-label"
+                style={{ marginTop: 4 }}
+              >
+                Compliance score
+              </div>
+              <div
+                style={{
+                  width: "100%",
+                  height: 4,
+                  background: "var(--hw-ink-6)",
+                  borderRadius: 2,
+                  marginTop: 16,
+                  overflow: "hidden",
+                }}
+              >
                 <div
-                  key={entry.id}
-                  className="glass rounded-xl p-4 flex items-center gap-4"
+                  style={{
+                    width: `${score}%`,
+                    height: "100%",
+                    background: `var(--hw-${scoreTone})`,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Audit timeline */}
+        <section className="hw-fade-up hw-fade-up-2">
+          <div
+            className="hw-panel overflow-hidden"
+            style={{ background: "var(--hw-bg-2)" }}
+          >
+            <div
+              className="flex items-center justify-between"
+              style={{
+                padding: "14px 20px",
+                borderBottom: "1px solid var(--hw-line)",
+              }}
+            >
+              <SectionHeader title="Audit timeline" />
+              <div className="flex items-center" style={{ gap: 10 }}>
+                <Icon name="filter" size={12} color="var(--hw-ink-4)" />
+                <select
+                  value={filterAction}
+                  onChange={(e) => setFilterAction(e.target.value)}
+                  className="hw-input"
+                  style={{
+                    width: "auto",
+                    padding: "6px 10px",
+                    fontSize: 11,
+                  }}
                 >
-                  {/* Action badge */}
-                  <span
-                    className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium ${colors.bg} ${colors.text} shrink-0`}
+                  <option value="all">All actions</option>
+                  {ALL_ACTIONS.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {filteredEntries.length === 0 ? (
+              <div
+                style={{
+                  padding: "56px 24px",
+                  textAlign: "center",
+                  fontSize: 12.5,
+                  color: "var(--hw-ink-4)",
+                }}
+              >
+                No audit entries yet. They appear as events flow through your integrations.
+              </div>
+            ) : (
+              <div>
+                {filteredEntries.map((entry, i) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center"
+                    style={{
+                      padding: "12px 20px",
+                      borderTop: i ? "1px solid var(--hw-line)" : "none",
+                      gap: 14,
+                    }}
                   >
-                    {entry.action}
-                  </span>
-
-                  {/* Integration name */}
-                  {entry.integrationId && (
-                    <span className="text-[11px] text-[var(--text-muted)] shrink-0">
-                      {integrationMap[entry.integrationId] ?? "Unknown"}
+                    <Chip tone={ACTION_TONE[entry.action] ?? undefined}>
+                      {entry.action}
+                    </Chip>
+                    {entry.integrationId && (
+                      <span
+                        className="hw-mono"
+                        style={{
+                          fontSize: 11,
+                          color: "var(--hw-ink-4)",
+                        }}
+                      >
+                        {integrationMap[entry.integrationId] ?? "—"}
+                      </span>
+                    )}
+                    <span
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        fontSize: 12,
+                        color: "var(--hw-ink-3)",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {summarizeDetails(entry.details)}
                     </span>
-                  )}
+                    <span
+                      className="hw-mono"
+                      style={{
+                        fontSize: 10,
+                        color: "var(--hw-ink-5)",
+                      }}
+                    >
+                      {entry.integrityHash.slice(0, 12)}
+                    </span>
+                    <span
+                      className="hw-mono hw-num"
+                      style={{
+                        fontSize: 11,
+                        color: "var(--hw-ink-4)",
+                      }}
+                    >
+                      {new Date(entry.createdAt).toLocaleString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
 
-                  {/* Details summary */}
-                  <span className="text-[12px] text-[var(--text-tertiary)] truncate flex-1 min-w-0">
-                    {summarizeDetails(entry.details)}
+        {/* Previous exports */}
+        {exportEntries.length > 0 && (
+          <section className="hw-fade-up hw-fade-up-3">
+            <div
+              className="hw-panel overflow-hidden"
+              style={{ background: "var(--hw-bg-2)" }}
+            >
+              <div
+                style={{
+                  padding: "14px 20px",
+                  borderBottom: "1px solid var(--hw-line)",
+                }}
+              >
+                <SectionHeader title="Previous exports" />
+              </div>
+              {exportEntries.map((exp, i) => (
+                <div
+                  key={exp.id}
+                  className="flex items-center"
+                  style={{
+                    padding: "12px 20px",
+                    borderTop: i ? "1px solid var(--hw-line)" : "none",
+                    gap: 14,
+                  }}
+                >
+                  <Icon name="clock" size={13} color="var(--hw-ink-4)" />
+                  <span
+                    className="hw-mono"
+                    style={{ fontSize: 12, color: "var(--hw-ink-2)" }}
+                  >
+                    {exp.format.toUpperCase()} export
                   </span>
-
-                  {/* Hash preview */}
-                  <span className="text-[10px] text-[var(--text-ghost)] font-mono shrink-0">
-                    {entry.integrityHash.slice(0, 12)}
+                  <span
+                    className="hw-mono"
+                    style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+                  >
+                    {new Date(exp.periodStart).toLocaleDateString()} →{" "}
+                    {new Date(exp.periodEnd).toLocaleDateString()}
                   </span>
-
-                  {/* Timestamp */}
-                  <span className="text-[11px] text-[var(--text-faint)] tabular-nums shrink-0">
-                    {new Date(entry.createdAt).toLocaleString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: false,
-                    })}
+                  <span style={{ marginLeft: "auto" }}>
+                    <Chip tone={exp.status === "completed" ? "green" : "amber"}>
+                      {exp.status}
+                    </Chip>
                   </span>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          </section>
         )}
       </div>
+      <style jsx>{`
+        :global(.hw-input) {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 8px;
+          background: var(--hw-bg-3);
+          border: 1px solid var(--hw-line-2);
+          color: var(--hw-ink);
+          font-size: 13px;
+          transition: all 150ms;
+        }
+        :global(.hw-input:focus) {
+          outline: none;
+          border-color: rgba(129, 140, 248, 0.4);
+          box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.08);
+        }
+      `}</style>
+    </>
+  );
+}
 
-      {/* Previous Exports */}
-      {exportEntries.length > 0 && (
-        <div className="fade-up fade-up-4">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-4 rounded-full bg-indigo-500" />
-            <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-              Previous Exports
-            </h2>
-          </div>
-          <div className="space-y-2">
-            {exportEntries.map((exp) => (
-              <div
-                key={exp.id}
-                className="glass rounded-xl p-4 flex items-center gap-4"
-              >
-                <Clock className="h-4 w-4 text-[var(--text-faint)] shrink-0" />
-                <span className="text-[12px] text-[var(--text-secondary)]">
-                  {exp.format.toUpperCase()} export
-                </span>
-                <span className="text-[11px] text-[var(--text-muted)]">
-                  {new Date(exp.periodStart).toLocaleDateString()} —{" "}
-                  {new Date(exp.periodEnd).toLocaleDateString()}
-                </span>
-                <span
-                  className={`ml-auto text-[11px] px-2 py-0.5 rounded ${
-                    exp.status === "completed"
-                      ? "bg-emerald-500/10 text-emerald-400"
-                      : "bg-amber-500/10 text-amber-400"
-                  }`}
-                >
-                  {exp.status}
-                </span>
-              </div>
-            ))}
-          </div>
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="hw-label" style={{ display: "block", marginBottom: 8 }}>
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+function ComplianceCheck({
+  label,
+  requirement,
+  passed,
+}: {
+  label: string;
+  requirement: string;
+  passed: boolean;
+}) {
+  return (
+    <div
+      className="flex items-start"
+      style={{
+        gap: 12,
+        padding: "10px 0",
+      }}
+    >
+      <Icon
+        name={passed ? "check" : "x"}
+        size={14}
+        color={passed ? "var(--hw-green)" : "var(--hw-red)"}
+      />
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 500,
+            color: passed ? "var(--hw-ink)" : "var(--hw-red)",
+          }}
+        >
+          {label}
         </div>
-      )}
+        <div
+          className="hw-mono"
+          style={{ fontSize: 11, color: "var(--hw-ink-4)", marginTop: 2 }}
+        >
+          {requirement}
+        </div>
+      </div>
     </div>
   );
 }
@@ -509,6 +647,8 @@ function summarizeDetails(details: unknown): string {
   if (entries.length === 0) return "";
   return entries
     .slice(0, 3)
-    .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
+    .map(
+      ([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`,
+    )
     .join(", ");
 }

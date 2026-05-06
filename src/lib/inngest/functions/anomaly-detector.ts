@@ -4,6 +4,7 @@ import { integrations, anomalies } from "@/lib/db/schema";
 import { eq, and, gte, isNull } from "drizzle-orm";
 import { detectAnomalies } from "@/lib/ai/anomaly-detection";
 import { diagnoseAnomaly } from "@/lib/ai/diagnose";
+import { storeIncidentDiagnosis } from "@/lib/ai/incident-memory";
 
 export const anomalyDetector = inngest.createFunction(
   {
@@ -58,13 +59,22 @@ export const anomalyDetector = inngest.createFunction(
             // AI diagnosis
             const diagnosis = await diagnoseAnomaly(anomaly.context);
 
+            // Upgrade severity if AI assessment warrants it
+            const aiSeverity = diagnosis.severityAssessment;
+            let finalSeverity = anomaly.severity;
+            if (aiSeverity.revenueAtRisk && aiSeverity.revenueAtRisk > 100000) {
+              finalSeverity = "critical";
+            } else if (aiSeverity.revenueAtRisk && aiSeverity.revenueAtRisk > 10000 && finalSeverity !== "critical") {
+              finalSeverity = "high";
+            }
+
             // Store
             const [inserted] = await db
               .insert(anomalies)
               .values({
                 integrationId: integration.id,
                 type: anomaly.type,
-                severity: anomaly.severity,
+                severity: finalSeverity,
                 diagnosis,
                 context: anomaly.context,
                 detectedAt: new Date(),
@@ -72,6 +82,8 @@ export const anomalyDetector = inngest.createFunction(
               .returning({ id: anomalies.id });
 
             if (inserted) {
+              // Store diagnosis in incident memory for future reference
+              await storeIncidentDiagnosis(inserted.id, diagnosis);
               stored.push(inserted.id);
             }
           }

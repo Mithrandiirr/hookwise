@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AuthShell, AuthField, AuthError, Icon } from "@/components/hw";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -20,14 +21,15 @@ export default function LoginPage() {
 
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     if (error) {
       setError(error.message);
       setLoading(false);
       return;
     }
-
     router.push("/dashboard");
     router.refresh();
   }
@@ -42,88 +44,123 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--bg-page)]">
-      <div className="w-full max-w-md space-y-8 px-4">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold text-[var(--text-primary)]">HookWise</h1>
-          <p className="mt-2 text-[var(--text-tertiary)]">Sign in to your account</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="rounded-lg bg-red-900/30 border border-red-800 px-4 py-3 text-sm text-red-400">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="you@example.com"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-[var(--text-secondary)] mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg bg-[var(--bg-surface)] border border-[var(--border-default)] px-4 py-2.5 text-[var(--text-primary)] placeholder-[var(--text-tertiary)] focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              placeholder="••••••••"
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Link href="/forgot-password" className="text-sm text-indigo-400 hover:text-indigo-300">
-              Forgot password?
-            </Link>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+    <AuthShell
+      kicker="SIGN IN"
+      title="Welcome back."
+      subtitle="Pick up where you left off."
+      footer={
+        <>
+          Don&apos;t have an account?{" "}
+          <Link
+            href="/signup"
+            style={{ color: "var(--hw-indigo-ink)" }}
           >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
+            Sign up
+          </Link>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit}>
+        {error && <AuthError message={error} />}
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[var(--border-default)]" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="bg-[var(--bg-page)] px-2 text-[var(--text-tertiary)]">or</span>
-          </div>
+        <AuthField label="Email" htmlFor="email">
+          <input
+            id="email"
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="hw-input hw-mono"
+            placeholder="you@example.com"
+          />
+        </AuthField>
+
+        <AuthField label="Password" htmlFor="password">
+          <input
+            id="password"
+            type="password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="hw-input hw-mono"
+            placeholder="••••••••"
+          />
+        </AuthField>
+
+        <div
+          className="flex justify-end"
+          style={{ marginBottom: 14 }}
+        >
+          <Link
+            href="/forgot-password"
+            className="hw-mono"
+            style={{ fontSize: 11, color: "var(--hw-indigo-ink)" }}
+          >
+            Forgot password?
+          </Link>
         </div>
 
         <button
-          onClick={handleGitHubLogin}
-          className="w-full rounded-lg bg-[var(--bg-surface-raised)] px-4 py-2.5 text-sm font-semibold text-[var(--text-primary)] hover:bg-[var(--bg-surface-hover)] transition-colors flex items-center justify-center gap-2"
+          type="submit"
+          disabled={loading}
+          className="hw-btn hw-btn-primary"
+          style={{
+            width: "100%",
+            justifyContent: "center",
+            padding: "12px 16px",
+            opacity: loading ? 0.6 : 1,
+          }}
         >
-          Continue with GitHub
+          {loading ? "Signing in…" : "Sign in"}
         </button>
 
-        <p className="text-center text-sm text-[var(--text-tertiary)]">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="text-indigo-400 hover:text-indigo-300">
-            Sign up
-          </Link>
-        </p>
-      </div>
-    </div>
+        <div
+          className="flex items-center"
+          style={{ gap: 12, margin: "20px 0" }}
+        >
+          <div style={{ flex: 1, height: 1, background: "var(--hw-line)" }} />
+          <span
+            className="hw-mono"
+            style={{ fontSize: 10, color: "var(--hw-ink-5)" }}
+          >
+            OR
+          </span>
+          <div style={{ flex: 1, height: 1, background: "var(--hw-line)" }} />
+        </div>
+
+        <button
+          type="button"
+          onClick={handleGitHubLogin}
+          className="hw-btn hw-btn-ghost"
+          style={{
+            width: "100%",
+            justifyContent: "center",
+            padding: "11px 16px",
+          }}
+        >
+          <Icon name="terminal" size={13} /> Continue with GitHub
+        </button>
+      </form>
+      <style jsx>{`
+        :global(.hw-input) {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 8px;
+          background: var(--hw-bg-3);
+          border: 1px solid var(--hw-line-2);
+          color: var(--hw-ink);
+          font-size: 13px;
+          transition: all 150ms;
+        }
+        :global(.hw-input:focus) {
+          outline: none;
+          border-color: rgba(129, 140, 248, 0.4);
+          box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.08);
+        }
+        :global(.hw-input::placeholder) {
+          color: var(--hw-ink-5);
+        }
+      `}</style>
+    </AuthShell>
   );
 }

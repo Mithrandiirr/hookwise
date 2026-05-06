@@ -354,9 +354,16 @@ export const benchmarks = pgTable("benchmarks", {
   measuredAt: timestamp("measured_at").notNull().defaultNow(),
 });
 
+export const waitlist = pgTable("waitlist", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export type SecurityScan = typeof securityScans.$inferSelect;
 export type SecurityFinding = typeof securityFindings.$inferSelect;
 export type AuditLogEntry = typeof auditLog.$inferSelect;
 export type ComplianceExport = typeof complianceExports.$inferSelect;
 export type ProviderHealth = typeof providerHealth.$inferSelect;
 export type Benchmark = typeof benchmarks.$inferSelect;
+export type WaitlistEntry = typeof waitlist.$inferSelect;

@@ -7,8 +7,6 @@ import {
   Activity,
   AlertTriangle,
   Bell,
-  FileCheck,
-  GitBranch,
   Globe,
   LayoutDashboard,
   Plug,
@@ -16,7 +14,6 @@ import {
   RotateCcw,
   Search,
   Settings,
-  ShieldCheck,
   LogOut,
   Zap,
 } from "lucide-react";
@@ -35,11 +32,8 @@ const nav: Array<{
   { href: "/integrations", label: "Integrations", icon: Plug },
   { href: "/anomalies", label: "Anomalies", icon: AlertTriangle },
   { href: "/alerts", label: "Alerts", icon: Bell },
-  { href: "/security", label: "Security", icon: ShieldCheck },
-  { href: "/compliance", label: "Compliance", icon: FileCheck },
   { href: "/replay", label: "Replay", icon: RotateCcw },
   { href: "/reconciliation", label: "Reconciliation", icon: RefreshCw },
-  { href: "/flows", label: "Flows", icon: GitBranch },
   { href: "/status", label: "Status Page", icon: Globe, external: true },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

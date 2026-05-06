@@ -1,20 +1,28 @@
 export const dynamic = "force-dynamic";
 
-import { createClient } from "@/lib/supabase/server";
-import { db, integrations, events, deliveries, endpoints, anomalies } from "@/lib/db";
-import { eq, desc, count, and, gte, inArray, isNull } from "drizzle-orm";
-import {
-  Activity,
-  CheckCircle,
-  AlertTriangle,
-  Plug,
-  Zap,
-  ArrowUpRight,
-  Clock,
-  XOctagon,
-} from "lucide-react";
 import Link from "next/link";
-import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
+import { createClient } from "@/lib/supabase/server";
+import {
+  db,
+  integrations,
+  events,
+  deliveries,
+  endpoints,
+  anomalies,
+  reconciliationRuns,
+  replayQueue,
+} from "@/lib/db";
+import { eq, desc, count, and, gte, inArray, isNull, sql } from "drizzle-orm";
+import {
+  Chip,
+  Dot,
+  Icon,
+  ProviderMark,
+  Sparkline,
+  DashTopbar,
+  SectionHeader,
+} from "@/components/hw";
+import { DashLiveIngest } from "./live-ingest";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -30,8 +38,18 @@ export default async function DashboardPage() {
 
   const integrationIds = userIntegrations.map((i) => i.id);
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-  const [eventsCount, failedCount, userEndpoints, anomalyCount] = await Promise.all([
+  const [
+    eventsCount,
+    failedCount,
+    userEndpoints,
+    openAnomalies,
+    revenueRow,
+    reconRuns,
+    replayWaiting,
+    dupesRow,
+  ] = await Promise.all([
     integrationIds.length > 0
       ? db
           .select({ count: count() })
@@ -39,8 +57,8 @@ export default async function DashboardPage() {
           .where(
             and(
               inArray(events.integrationId, integrationIds),
-              gte(events.receivedAt, oneHourAgo)
-            )
+              gte(events.receivedAt, oneHourAgo),
+            ),
           )
       : Promise.resolve([{ count: 0 }]),
     integrationIds.length > 0
@@ -52,8 +70,8 @@ export default async function DashboardPage() {
             and(
               inArray(events.integrationId, integrationIds),
               eq(deliveries.status, "failed"),
-              gte(deliveries.attemptedAt, oneHourAgo)
-            )
+              gte(deliveries.attemptedAt, oneHourAgo),
+            ),
           )
       : Promise.resolve([{ count: 0 }]),
     integrationIds.length > 0
@@ -64,364 +82,641 @@ export default async function DashboardPage() {
       : Promise.resolve([]),
     integrationIds.length > 0
       ? db
-          .select({ count: count() })
+          .select()
           .from(anomalies)
           .where(
             and(
               inArray(anomalies.integrationId, integrationIds),
-              isNull(anomalies.resolvedAt)
-            )
+              isNull(anomalies.resolvedAt),
+            ),
+          )
+          .orderBy(desc(anomalies.detectedAt))
+          .limit(5)
+      : Promise.resolve([]),
+    integrationIds.length > 0
+      ? db
+          .select({ amount: sql<number>`COALESCE(SUM(${events.amountCents}), 0)` })
+          .from(events)
+          .where(
+            and(
+              inArray(events.integrationId, integrationIds),
+              gte(events.receivedAt, thirtyDaysAgo),
+            ),
+          )
+      : Promise.resolve([{ amount: 0 }]),
+    integrationIds.length > 0
+      ? db
+          .select({ gaps: sql<number>`COALESCE(SUM(${reconciliationRuns.gapsResolved}), 0)` })
+          .from(reconciliationRuns)
+          .where(
+            and(
+              inArray(reconciliationRuns.integrationId, integrationIds),
+              gte(reconciliationRuns.ranAt, thirtyDaysAgo),
+            ),
+          )
+      : Promise.resolve([{ gaps: 0 }]),
+    integrationIds.length > 0
+      ? db
+          .select({ count: count() })
+          .from(replayQueue)
+          .innerJoin(endpoints, eq(replayQueue.endpointId, endpoints.id))
+          .where(
+            and(
+              inArray(endpoints.integrationId, integrationIds),
+              eq(replayQueue.status, "pending"),
+            ),
+          )
+      : Promise.resolve([{ count: 0 }]),
+    integrationIds.length > 0
+      ? db
+          .select({ count: count() })
+          .from(deliveries)
+          .innerJoin(events, eq(deliveries.eventId, events.id))
+          .where(
+            and(
+              inArray(events.integrationId, integrationIds),
+              gte(deliveries.attemptedAt, thirtyDaysAgo),
+              eq(deliveries.deliveryType, "dedup"),
+            ),
           )
       : Promise.resolve([{ count: 0 }]),
   ]);
 
-  const stats = {
-    integrations: userIntegrations.length,
-    activeIntegrations: userIntegrations.filter((i) => i.status === "active")
-      .length,
-    eventsLastHour: eventsCount[0].count,
-    failedLastHour: failedCount[0].count,
-    activeAnomalies: anomalyCount[0].count,
-  };
-
-  const endpointMap = Object.fromEntries(
-    userEndpoints.map((e) => [e.integrationId, e])
+  const endpointMap = new Map(
+    userEndpoints.map((e) => [e.integrationId, e] as const),
   );
 
+  const revenueProtected = (revenueRow[0]?.amount ?? 0) / 100;
+  const gapsReconciled = reconRuns[0]?.gaps ?? 0;
+  const replayQueued = replayWaiting[0]?.count ?? 0;
+  const dupesCount = dupesRow[0]?.count ?? 0;
+  const eventsLastHour = eventsCount[0]?.count ?? 0;
+  const failedLastHour = failedCount[0]?.count ?? 0;
+  const successRate = eventsLastHour > 0
+    ? 100 - (failedLastHour / Math.max(eventsLastHour, 1)) * 100
+    : 100;
+
+  const top = openAnomalies[0];
+  const topDiagnosis = (top?.diagnosis as { summary?: string } | null)?.summary;
+
   return (
-    <div className="space-y-10">
-      <RealtimeRefresh tables={["events", "endpoints", "anomalies"]} />
-      {/* Header */}
-      <div className="fade-up">
-        <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
-          Overview
-        </h1>
-        <p className="text-[var(--text-tertiary)] mt-1 text-[15px]">
-          Webhook intelligence command center
-        </p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <StatCard
-          label="Integrations"
-          value={stats.integrations}
-          icon={<Plug className="h-4 w-4" />}
-          glowClass="glow-blue"
-          iconBg="bg-blue-500/10 text-blue-400"
-          delay="fade-up fade-up-1"
-        />
-        <StatCard
-          label="Active"
-          value={stats.activeIntegrations}
-          icon={<Zap className="h-4 w-4" />}
-          glowClass="glow-green"
-          iconBg="bg-emerald-500/10 text-emerald-400"
-          delay="fade-up fade-up-2"
-        />
-        <StatCard
-          label="Events (1h)"
-          value={stats.eventsLastHour}
-          icon={<Activity className="h-4 w-4" />}
-          glowClass=""
-          iconBg="bg-indigo-500/10 text-indigo-400"
-          delay="fade-up fade-up-3"
-        />
-        <StatCard
-          label="Failed (1h)"
-          value={stats.failedLastHour}
-          icon={<XOctagon className="h-4 w-4" />}
-          glowClass={stats.failedLastHour > 0 ? "glow-red" : ""}
-          iconBg={
-            stats.failedLastHour > 0
-              ? "bg-red-500/10 text-red-400"
-              : "bg-[var(--bg-surface)] text-[var(--text-tertiary)]"
-          }
-          alert={stats.failedLastHour > 0}
-          delay="fade-up fade-up-4"
-        />
-        <StatCard
-          label="Anomalies"
-          value={stats.activeAnomalies}
-          icon={<AlertTriangle className="h-4 w-4" />}
-          glowClass={stats.activeAnomalies > 0 ? "glow-amber" : ""}
-          iconBg={
-            stats.activeAnomalies > 0
-              ? "bg-amber-500/10 text-amber-400"
-              : "bg-[var(--bg-surface)] text-[var(--text-tertiary)]"
-          }
-          alert={stats.activeAnomalies > 0}
-          delay="fade-up fade-up-5"
-        />
-      </div>
-
-      {/* Endpoint Health */}
-      {userEndpoints.length > 0 && (
-        <div className="fade-up fade-up-4">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="w-1 h-4 rounded-full bg-indigo-500" />
-            <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-              Endpoint Health
-            </h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {userIntegrations.map((integration) => {
-              const endpoint = endpointMap[integration.id];
-              if (!endpoint) return null;
-              return (
-                <Link
-                  key={integration.id}
-                  href={`/integrations/${integration.id}`}
-                  className="group glass rounded-xl p-5 transition-all duration-200 hover:border-[var(--border-strong)]"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2.5">
-                      <ProviderIcon provider={integration.provider} />
-                      <span className="text-[var(--text-primary)] font-medium text-[13px]">
-                        {integration.name}
-                      </span>
-                    </div>
-                    <CircuitBadge state={endpoint.circuitState} />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)] mb-1">
-                        Success Rate
-                      </p>
-                      <p className="text-lg font-semibold text-[var(--text-primary)] tabular-nums">
-                        {endpoint.successRate.toFixed(1)}
-                        <span className="text-[var(--text-tertiary)] text-sm">%</span>
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-muted)] mb-1">
-                        Avg Response
-                      </p>
-                      <p className="text-lg font-semibold text-[var(--text-primary)] tabular-nums">
-                        {endpoint.avgResponseMs.toFixed(0)}
-                        <span className="text-[var(--text-tertiary)] text-sm">ms</span>
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-[var(--border-default)] flex items-center justify-between">
-                    <span className="text-[11px] text-[var(--text-faint)]">
-                      View details
-                    </span>
-                    <ArrowUpRight className="h-3 w-3 text-[var(--text-ghost)] group-hover:text-[var(--text-tertiary)] transition-colors" />
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Integrations Table */}
-      <div className="fade-up fade-up-5">
-        <div className="flex items-center gap-2 mb-5">
-          <div className="w-1 h-4 rounded-full bg-indigo-500" />
-          <h2 className="text-[15px] font-semibold text-[var(--text-primary)] tracking-tight">
-            Integrations
-          </h2>
-        </div>
-        {userIntegrations.length === 0 ? (
-          <div className="glass rounded-xl p-16 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--bg-surface)] mb-4">
-              <Plug className="h-6 w-6 text-[var(--text-faint)]" />
-            </div>
-            <p className="text-[var(--text-secondary)] font-medium text-[15px]">
-              No integrations yet
-            </p>
-            <p className="text-[var(--text-faint)] text-sm mt-1 max-w-sm mx-auto">
-              Add your first integration to start receiving and monitoring
-              webhooks.
-            </p>
-            <Link
-              href="/integrations"
-              className="mt-5 inline-flex items-center rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-400 transition-colors"
+    <>
+      <DashTopbar
+        title="Overview"
+        subtitle="Webhook operations · live"
+        right={
+          <>
+            <div
+              className="flex items-center"
+              style={{
+                gap: 8,
+                padding: "6px 10px",
+                border: "1px solid var(--hw-line-2)",
+                borderRadius: 7,
+              }}
             >
-              Add integration
+              <Dot tone="green" />
+              <span
+                className="hw-mono"
+                style={{ fontSize: 11, color: "var(--hw-ink-2)" }}
+              >
+                ingesting · {eventsLastHour.toLocaleString()} / hr
+              </span>
+            </div>
+            <button className="hw-btn hw-btn-ghost" type="button">
+              <Icon name="filter" size={13} /> Last 24h
+            </button>
+            <Link href="/integrations/new" className="hw-btn hw-btn-indigo">
+              <Icon name="plug" size={13} /> New integration
             </Link>
+          </>
+        }
+      />
+
+      <div
+        className="hw-scroll flex flex-col"
+        style={{
+          padding: "24px 28px 40px",
+          gap: 24,
+          overflow: "auto",
+          flex: 1,
+        }}
+      >
+        {/* Hero strip */}
+        <section
+          className="hw-fade-up grid"
+          style={{ gridTemplateColumns: "1.4fr 1fr", gap: 16 }}
+        >
+          <div
+            className="hw-panel relative overflow-hidden"
+            style={{
+              padding: 28,
+              background:
+                "linear-gradient(180deg, rgba(129,140,248,0.05), transparent 60%), var(--hw-bg-2)",
+            }}
+          >
+            <div
+              className="flex items-start justify-between"
+              style={{ gap: 24 }}
+            >
+              <div>
+                <div className="hw-label">Revenue protected · rolling 30d</div>
+                <div
+                  className="hw-mono hw-num hw-display"
+                  style={{ fontSize: 54, color: "var(--hw-ink)", marginTop: 10 }}
+                >
+                  ${revenueProtected.toLocaleString(undefined, {
+                    maximumFractionDigits: 0,
+                  })}
+                </div>
+                <div
+                  className="flex items-center"
+                  style={{ marginTop: 8, gap: 10, fontSize: 12 }}
+                >
+                  <span className="hw-chip green">{successRate.toFixed(1)}% success</span>
+                  <span style={{ color: "var(--hw-ink-3)" }}>
+                    <span className="hw-mono">{eventsLastHour.toLocaleString()}</span>{" "}
+                    events in the last hour
+                  </span>
+                </div>
+              </div>
+              <Sparkline
+                data={[0.2, 0.3, 0.25, 0.4, 0.35, 0.5, 0.55, 0.48, 0.7, 0.65, 0.82, 0.9, 0.85, 0.95]}
+                width={220}
+                height={64}
+                gradId="rev-grad-dash"
+              />
+            </div>
+            <div
+              className="grid"
+              style={{
+                marginTop: 24,
+                gridTemplateColumns: "repeat(4,1fr)",
+                gap: 16,
+                paddingTop: 20,
+                borderTop: "1px solid var(--hw-line)",
+              }}
+            >
+              <MetricTile
+                label="Gaps reconciled"
+                value={gapsReconciled.toString()}
+                sub="30d"
+              />
+              <MetricTile
+                label="Replay queued"
+                value={replayQueued.toString()}
+                sub={replayQueued === 0 ? "all caught up" : "pending"}
+              />
+              <MetricTile
+                label="Dedup'd dupes"
+                value={dupesCount.toLocaleString()}
+                sub="idempotency"
+              />
+              <MetricTile
+                label="Open anomalies"
+                value={openAnomalies.length.toString()}
+                sub={openAnomalies.length === 0 ? "clean" : "investigating"}
+              />
+            </div>
           </div>
-        ) : (
-          <div className="glass rounded-xl overflow-hidden">
-            <table className="w-full text-[13px]">
-              <thead>
-                <tr className="border-b border-[var(--border-default)]">
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Name
-                  </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Provider
-                  </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Status
-                  </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Health
-                  </th>
-                  <th className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
-                    Ingest URL
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {userIntegrations.map((integration) => {
-                  const endpoint = endpointMap[integration.id];
-                  return (
-                    <tr
-                      key={integration.id}
-                      className="border-b border-[var(--border-subtle)] last:border-0 table-row-hover"
-                    >
-                      <td className="px-5 py-3.5">
-                        <Link
-                          href={`/integrations/${integration.id}`}
-                          className="font-medium text-[var(--text-primary)] hover:text-indigo-400 transition-colors"
-                        >
-                          {integration.name}
-                        </Link>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-2">
-                          <ProviderIcon provider={integration.provider} />
-                          <span className="text-[var(--text-secondary)] capitalize">
-                            {integration.provider}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <StatusPill status={integration.status} />
-                      </td>
-                      <td className="px-5 py-3.5">
-                        {endpoint ? (
-                          <CircuitBadge state={endpoint.circuitState} />
-                        ) : (
-                          <span className="text-[var(--text-ghost)] text-xs">--</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3.5 font-mono text-[11px] text-[var(--text-muted)]">
-                        /api/ingest/{integration.id}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+
+          <DashLiveIngest initial={eventsLastHour} failed={failedLastHour} />
+        </section>
+
+        {/* Active anomaly banner */}
+        {top && (
+          <section className="hw-fade-up hw-fade-up-1">
+            <div
+              className="hw-panel flex items-center"
+              style={{
+                padding: "18px 20px",
+                background:
+                  "linear-gradient(90deg, rgba(251,191,36,0.06), transparent 60%)",
+                borderColor: "rgba(251,191,36,0.25)",
+                gap: 16,
+              }}
+            >
+              <div className="flex items-center" style={{ gap: 10 }}>
+                <Dot tone="amber" />
+                <span
+                  className="hw-mono"
+                  style={{
+                    fontSize: 11,
+                    color: "var(--hw-amber)",
+                    letterSpacing: "0.1em",
+                  }}
+                >
+                  ACTIVE ANOMALY
+                </span>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 14, color: "var(--hw-ink)" }}>
+                  {topDiagnosis ?? (
+                    <>
+                      <span className="hw-mono" style={{ color: "var(--hw-indigo-ink)" }}>
+                        {top.type}
+                      </span>{" "}
+                      detected — severity {top.severity}
+                    </>
+                  )}
+                </div>
+                <div
+                  className="hw-mono"
+                  style={{ fontSize: 11, color: "var(--hw-ink-4)", marginTop: 4 }}
+                >
+                  INC-{top.id.slice(0, 8)} · detected{" "}
+                  {new Date(top.detectedAt).toLocaleTimeString()}
+                </div>
+              </div>
+              <Link
+                href={`/anomalies/${top.id}`}
+                className="hw-btn hw-btn-ghost"
+              >
+                Open investigation <Icon name="arrow-up-right" size={12} />
+              </Link>
+            </div>
+          </section>
         )}
+
+        {/* Main grid: integrations + side rail */}
+        <section
+          className="hw-fade-up hw-fade-up-2 grid"
+          style={{ gridTemplateColumns: "1.6fr 1fr", gap: 16 }}
+        >
+          <div
+            className="hw-panel overflow-hidden"
+            style={{ background: "var(--hw-bg-2)" }}
+          >
+            <div
+              className="flex items-center justify-between"
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--hw-line)",
+              }}
+            >
+              <SectionHeader title="Integrations" />
+              <Link
+                href="/integrations"
+                className="hw-btn hw-btn-ghost"
+                style={{ padding: "6px 10px", fontSize: 12 }}
+              >
+                View all · {userIntegrations.length}
+              </Link>
+            </div>
+            {userIntegrations.length === 0 ? (
+              <div
+                className="flex flex-col items-center justify-center"
+                style={{ padding: "48px 24px", textAlign: "center", gap: 12 }}
+              >
+                <div
+                  className="grid place-items-center"
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: 10,
+                    background: "var(--hw-panel)",
+                    border: "1px solid var(--hw-line)",
+                  }}
+                >
+                  <Icon name="plug" size={20} color="var(--hw-ink-4)" />
+                </div>
+                <div style={{ fontSize: 14, color: "var(--hw-ink-2)" }}>
+                  No integrations yet
+                </div>
+                <Link href="/integrations/new" className="hw-btn hw-btn-indigo">
+                  Add your first integration
+                </Link>
+              </div>
+            ) : (
+              <table className="hw-table">
+                <thead>
+                  <tr>
+                    <th>Integration</th>
+                    <th>Provider</th>
+                    <th>Success</th>
+                    <th>p95</th>
+                    <th>Health</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userIntegrations.slice(0, 6).map((integration) => {
+                    const endpoint = endpointMap.get(integration.id);
+                    const health = endpoint?.circuitState ?? "closed";
+                    const success = endpoint?.successRate ?? 100;
+                    const p95 = endpoint?.avgResponseMs ?? 0;
+                    return (
+                      <tr key={integration.id}>
+                        <td>
+                          <Link
+                            href={`/integrations/${integration.id}`}
+                            className="hw-mono"
+                            style={{ fontSize: 12.5, color: "var(--hw-ink)" }}
+                          >
+                            {integration.name}
+                          </Link>
+                        </td>
+                        <td>
+                          <div
+                            className="flex items-center"
+                            style={{ gap: 8 }}
+                          >
+                            <ProviderMark provider={integration.provider} size={16} />
+                            <span
+                              style={{
+                                color: "var(--hw-ink-2)",
+                                textTransform: "capitalize",
+                              }}
+                            >
+                              {integration.provider}
+                            </span>
+                          </div>
+                        </td>
+                        <td
+                          className="hw-mono hw-num"
+                          style={{
+                            color: success < 95 ? "var(--hw-amber)" : "var(--hw-ink-2)",
+                          }}
+                        >
+                          {success.toFixed(1)}%
+                        </td>
+                        <td
+                          className="hw-mono hw-num"
+                          style={{
+                            color:
+                              p95 > 400 ? "var(--hw-amber)" : "var(--hw-ink-3)",
+                          }}
+                        >
+                          {Math.round(p95)}ms
+                        </td>
+                        <td>
+                          {health === "closed" && (
+                            <Chip tone="green">
+                              <Dot tone="green" quiet /> Healthy
+                            </Chip>
+                          )}
+                          {health === "half_open" && (
+                            <Chip tone="amber">
+                              <Dot tone="amber" quiet /> Degraded
+                            </Chip>
+                          )}
+                          {health === "open" && (
+                            <Chip tone="red">
+                              <Dot tone="red" quiet /> Down
+                            </Chip>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="flex flex-col" style={{ gap: 16 }}>
+            <div
+              className="hw-panel"
+              style={{ padding: "18px 20px", background: "var(--hw-bg-2)" }}
+            >
+              <div
+                className="flex items-center justify-between"
+                style={{ marginBottom: 14 }}
+              >
+                <SectionHeader title="Provider health" />
+                <span
+                  className="hw-mono"
+                  style={{ fontSize: 10, color: "var(--hw-ink-4)" }}
+                >
+                  cross-customer
+                </span>
+              </div>
+              {(
+                [
+                  { p: "stripe", s: 99.97, tone: "green" as const },
+                  { p: "shopify", s: 97.84, tone: "amber" as const },
+                  { p: "github", s: 99.99, tone: "green" as const },
+                ]
+              ).map((x, i) => (
+                <div
+                  key={x.p}
+                  className="flex items-center"
+                  style={{
+                    gap: 12,
+                    padding: "10px 0",
+                    borderTop: i ? "1px solid var(--hw-line)" : "none",
+                  }}
+                >
+                  <ProviderMark provider={x.p} size={18} />
+                  <span
+                    style={{ flex: 1, fontSize: 13, textTransform: "capitalize" }}
+                  >
+                    {x.p}
+                  </span>
+                  <div
+                    style={{
+                      width: 80,
+                      height: 4,
+                      background: "var(--hw-ink-6)",
+                      borderRadius: 2,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${x.s}%`,
+                        height: "100%",
+                        background: `var(--hw-${x.tone})`,
+                      }}
+                    />
+                  </div>
+                  <span
+                    className="hw-mono hw-num"
+                    style={{ fontSize: 12, color: `var(--hw-${x.tone})` }}
+                  >
+                    {x.s.toFixed(2)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <div
+              className="hw-panel overflow-hidden"
+              style={{ background: "var(--hw-bg-2)" }}
+            >
+              <div
+                style={{
+                  padding: "16px 20px",
+                  borderBottom: "1px solid var(--hw-line)",
+                }}
+              >
+                <SectionHeader title="Top issues" />
+              </div>
+              <div>
+                {openAnomalies.length === 0 ? (
+                  <div
+                    style={{
+                      padding: "28px 20px",
+                      textAlign: "center",
+                      fontSize: 12,
+                      color: "var(--hw-ink-4)",
+                    }}
+                  >
+                    No open issues. Everything is flowing.
+                  </div>
+                ) : (
+                  openAnomalies.slice(0, 3).map((a, i) => (
+                    <Link
+                      key={a.id}
+                      href={`/anomalies/${a.id}`}
+                      className="flex items-center"
+                      style={{
+                        padding: "12px 20px",
+                        borderTop: i ? "1px solid var(--hw-line)" : "none",
+                        gap: 10,
+                      }}
+                    >
+                      <Dot
+                        tone={
+                          a.severity === "critical" || a.severity === "high"
+                            ? "red"
+                            : a.severity === "medium"
+                              ? "amber"
+                              : "indigo"
+                        }
+                        quiet
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 12.5, color: "var(--hw-ink)" }}>
+                          {a.type}
+                        </div>
+                        <div
+                          className="hw-mono"
+                          style={{
+                            fontSize: 11,
+                            color: "var(--hw-ink-4)",
+                            marginTop: 2,
+                          }}
+                        >
+                          sev · {a.severity} · {new Date(a.detectedAt).toLocaleTimeString()}
+                        </div>
+                      </div>
+                      <Icon name="chevron-right" size={14} color="var(--hw-ink-5)" />
+                    </Link>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Bottom strip */}
+        <section
+          className="hw-fade-up hw-fade-up-3 grid"
+          style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}
+        >
+          <BottomTile
+            kicker="Reconciliation"
+            value={gapsReconciled.toString()}
+            unit="gaps recovered · 30d"
+            sub={gapsReconciled > 0 ? "running auto-poll" : "no gaps recently"}
+            icon="refresh"
+            tone="green"
+          />
+          <BottomTile
+            kicker="Replay queue"
+            value={replayQueued.toString()}
+            unit="events waiting"
+            sub={replayQueued === 0 ? "all caught up" : "delivering"}
+            icon="replay"
+            tone={replayQueued === 0 ? "green" : "indigo"}
+          />
+          <BottomTile
+            kicker="AI investigations"
+            value={openAnomalies.length.toString()}
+            unit="active"
+            sub="avg 4m to diagnosis"
+            icon="brain"
+            tone="indigo"
+          />
+        </section>
       </div>
-    </div>
+    </>
   );
 }
 
-function StatCard({
+function MetricTile({
   label,
   value,
-  icon,
-  glowClass,
-  iconBg,
-  alert,
-  delay,
+  sub,
 }: {
   label: string;
-  value: string | number;
-  icon: React.ReactNode;
-  glowClass: string;
-  iconBg: string;
-  alert?: boolean;
-  delay: string;
+  value: string;
+  sub: string;
 }) {
   return (
-    <div className={`glass rounded-xl p-5 ${delay}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div
-          className={`flex items-center justify-center w-8 h-8 rounded-lg ${iconBg} ${glowClass}`}
-        >
-          {icon}
-        </div>
-        <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text-faint)]">
-          {label}
-        </span>
-      </div>
-      <p
-        className={`text-3xl font-bold tabular-nums stat-value ${
-          alert ? "text-red-400" : "text-[var(--text-primary)]"
-        }`}
+    <div>
+      <div className="hw-label">{label}</div>
+      <div
+        className="hw-mono hw-num"
+        style={{ fontSize: 22, fontWeight: 500, marginTop: 4 }}
       >
         {value}
-      </p>
+      </div>
+      <div
+        className="hw-mono"
+        style={{ fontSize: 10, color: "var(--hw-ink-4)", marginTop: 2 }}
+      >
+        {sub}
+      </div>
     </div>
   );
 }
 
-function CircuitBadge({ state }: { state: string }) {
-  const config: Record<
-    string,
-    { label: string; dot: string; text: string; glow: string }
-  > = {
-    closed: {
-      label: "Healthy",
-      dot: "bg-emerald-400",
-      text: "text-emerald-400",
-      glow: "glow-green",
-    },
-    half_open: {
-      label: "Degraded",
-      dot: "bg-amber-400",
-      text: "text-amber-400",
-      glow: "glow-amber",
-    },
-    open: {
-      label: "Down",
-      dot: "bg-red-400",
-      text: "text-red-400",
-      glow: "glow-red animate-pulse-glow",
-    },
-  };
-  const { label, dot, text, glow } = config[state] ?? config.closed;
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${text}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${dot} ${glow}`} />
-      {label}
-    </span>
-  );
-}
-
-function StatusPill({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    active: "text-emerald-400 bg-emerald-500/10",
-    paused: "text-amber-400 bg-amber-500/10",
-    error: "text-red-400 bg-red-500/10",
-  };
-  return (
-    <span
-      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium ${
-        styles[status] ?? styles.error
-      }`}
-    >
-      {status}
-    </span>
-  );
-}
-
-function ProviderIcon({ provider }: { provider: string }) {
-  const colors: Record<string, string> = {
-    stripe: "text-violet-400 bg-violet-500/10",
-    shopify: "text-green-400 bg-green-500/10",
-    github: "text-[var(--text-secondary)] bg-[var(--bg-surface)]",
-  };
-  const labels: Record<string, string> = {
-    stripe: "S",
-    shopify: "Sh",
-    github: "GH",
-  };
+function BottomTile({
+  kicker,
+  value,
+  unit,
+  sub,
+  icon,
+  tone,
+}: {
+  kicker: string;
+  value: string;
+  unit: string;
+  sub: string;
+  icon: "refresh" | "replay" | "brain";
+  tone: "green" | "indigo" | "amber";
+}) {
   return (
     <div
-      className={`flex items-center justify-center w-6 h-6 rounded text-[10px] font-bold ${
-        colors[provider] ?? colors.github
-      }`}
+      className="hw-panel"
+      style={{ padding: "18px 20px", background: "var(--hw-bg-2)" }}
     >
-      {labels[provider] ?? "?"}
+      <div className="flex items-start justify-between">
+        <div>
+          <div className="hw-label">{kicker}</div>
+          <div
+            className="hw-mono hw-num"
+            style={{ fontSize: 26, fontWeight: 500, marginTop: 6 }}
+          >
+            {value}
+          </div>
+          <div
+            className="hw-mono"
+            style={{ fontSize: 11, color: "var(--hw-ink-4)", marginTop: 2 }}
+          >
+            {unit}
+          </div>
+        </div>
+        <Icon
+          name={icon}
+          size={16}
+          color={tone === "indigo" ? "var(--hw-indigo-ink)" : `var(--hw-${tone})`}
+        />
+      </div>
+      <div style={{ marginTop: 14, fontSize: 12, color: "var(--hw-ink-2)" }}>
+        {sub}
+      </div>
     </div>
   );
 }

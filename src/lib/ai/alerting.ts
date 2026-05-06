@@ -45,6 +45,11 @@ export async function sendEmailAlert(
   <h3>Recommendation</h3>
   <p>${payload.diagnosis.recommendation}</p>
   ${payload.diagnosis.crossCorrelation ? `<h3>Cross-correlation</h3><p>${payload.diagnosis.crossCorrelation}</p>` : ""}
+  ${payload.diagnosis.predictedResolution ? `<h3>Predicted Resolution</h3><p>${payload.diagnosis.predictedResolution}</p>` : ""}
+  ${payload.diagnosis.severityAssessment?.revenueAtRisk ? `<h3>Revenue at Risk</h3><p>$${(payload.diagnosis.severityAssessment.revenueAtRisk / 100).toFixed(2)}</p>` : ""}
+  ${payload.diagnosis.evidence.length > 0 ? `<h3>Investigation</h3><p>AI investigated using ${payload.diagnosis.evidence.length} data sources before diagnosing. Confidence: ${(payload.diagnosis.confidence * 100).toFixed(0)}%</p>` : ""}
+  ${payload.diagnosis.remediationActions.length > 0 ? `<h3>Suggested Actions</h3><ul>${payload.diagnosis.remediationActions.map((a) => `<li>${a.type.replace(/_/g, " ")}: ${a.reason}</li>`).join("")}</ul>` : ""}
+  ${payload.diagnosis.similarIncidents.length > 0 ? `<p><em>This pattern has occurred ${payload.diagnosis.similarIncidents.length} time(s) before.</em></p>` : ""}
   <hr style="border: 1px solid #eee;" />
   <p><a href="${payload.dashboardUrl}" style="color: #6366f1;">View in dashboard</a></p>
 </div>`;
@@ -113,6 +118,30 @@ export async function sendSlackAlert(
               text: `*What:* ${payload.diagnosis.what}\n\n*Why:* ${payload.diagnosis.why}\n\n*Impact:* ${payload.diagnosis.impact}\n\n*Recommendation:* ${payload.diagnosis.recommendation}`,
             },
           },
+          ...(payload.diagnosis.evidence.length > 0
+            ? [
+                {
+                  type: "context" as const,
+                  elements: [
+                    {
+                      type: "mrkdwn" as const,
+                      text: `Investigated ${payload.diagnosis.evidence.length} data sources | Confidence: ${(payload.diagnosis.confidence * 100).toFixed(0)}%${payload.diagnosis.similarIncidents.length > 0 ? ` | ${payload.diagnosis.similarIncidents.length} similar past incidents` : ""}${payload.diagnosis.severityAssessment?.revenueAtRisk ? ` | $${(payload.diagnosis.severityAssessment.revenueAtRisk / 100).toFixed(2)} at risk` : ""}`,
+                    },
+                  ],
+                },
+              ]
+            : []),
+          ...(payload.diagnosis.remediationActions.length > 0
+            ? [
+                {
+                  type: "section" as const,
+                  text: {
+                    type: "mrkdwn" as const,
+                    text: `*Suggested actions:*\n${payload.diagnosis.remediationActions.map((a) => `- ${a.type.replace(/_/g, " ")}: ${a.reason}`).join("\n")}`,
+                  },
+                },
+              ]
+            : []),
           {
             type: "actions",
             elements: [

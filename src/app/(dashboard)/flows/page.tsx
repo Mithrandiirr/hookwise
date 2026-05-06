@@ -1,11 +1,10 @@
 export const dynamic = "force-dynamic";
 
-import { createClient } from "@/lib/supabase/server";
-import { db, flows, flowInstances, integrations } from "@/lib/db";
-import { eq, desc, count, and } from "drizzle-orm";
-import { GitBranch, Plus, ArrowUpRight, CheckCircle, Clock, XCircle, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
+import { createClient } from "@/lib/supabase/server";
+import { db, flows, flowInstances } from "@/lib/db";
+import { eq, desc, count, and } from "drizzle-orm";
+import { Chip, Icon, DashTopbar } from "@/components/hw";
 
 export default async function FlowsPage() {
   const supabase = await createClient();
@@ -19,189 +18,243 @@ export default async function FlowsPage() {
     .where(eq(flows.userId, user!.id))
     .orderBy(desc(flows.createdAt));
 
-  // Get instance counts per flow
   const flowStats = await Promise.all(
     userFlows.map(async (flow) => {
       const [running] = await db
         .select({ count: count() })
         .from(flowInstances)
         .where(
-          and(
-            eq(flowInstances.flowId, flow.id),
-            eq(flowInstances.status, "running")
-          )
+          and(eq(flowInstances.flowId, flow.id), eq(flowInstances.status, "running")),
         );
       const [completed] = await db
         .select({ count: count() })
         .from(flowInstances)
         .where(
-          and(
-            eq(flowInstances.flowId, flow.id),
-            eq(flowInstances.status, "completed")
-          )
+          and(eq(flowInstances.flowId, flow.id), eq(flowInstances.status, "completed")),
         );
       const [failed] = await db
         .select({ count: count() })
         .from(flowInstances)
         .where(
-          and(
-            eq(flowInstances.flowId, flow.id),
-            eq(flowInstances.status, "failed")
-          )
+          and(eq(flowInstances.flowId, flow.id), eq(flowInstances.status, "failed")),
         );
       const [timedOut] = await db
         .select({ count: count() })
         .from(flowInstances)
         .where(
-          and(
-            eq(flowInstances.flowId, flow.id),
-            eq(flowInstances.status, "timed_out")
-          )
+          and(eq(flowInstances.flowId, flow.id), eq(flowInstances.status, "timed_out")),
         );
-
       return {
         flowId: flow.id,
         running: running?.count ?? 0,
         completed: completed?.count ?? 0,
-        failed: failed?.count ?? 0,
-        timedOut: timedOut?.count ?? 0,
+        failed: (failed?.count ?? 0) + (timedOut?.count ?? 0),
       };
-    })
+    }),
   );
-
-  const statsMap = Object.fromEntries(flowStats.map((s) => [s.flowId, s]));
+  const statsMap = new Map(flowStats.map((s) => [s.flowId, s] as const));
 
   return (
-    <div className="space-y-8">
-      <RealtimeRefresh tables={["flows", "flow_instances"]} />
-      <div className="flex items-center justify-between fade-up">
-        <div>
-          <h1 className="text-[28px] font-bold tracking-tight text-[var(--text-primary)]">
-            Flows
-          </h1>
-          <p className="text-[var(--text-tertiary)] mt-1 text-[15px]">
-            Track multi-step event chains across providers
-          </p>
-        </div>
-        <Link
-          href="/flows/new"
-          className="flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-[13px] font-medium text-white hover:bg-indigo-400 transition-colors"
-        >
-          <Plus className="h-3.5 w-3.5" />
-          Create flow
-        </Link>
-      </div>
-
-      {userFlows.length === 0 ? (
-        <div className="glass rounded-xl p-16 text-center fade-up fade-up-1">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[var(--bg-surface)] mb-4">
-            <GitBranch className="h-6 w-6 text-[var(--text-faint)]" />
-          </div>
-          <p className="text-[var(--text-secondary)] font-medium text-[15px]">
-            No flows defined
-          </p>
-          <p className="text-[var(--text-faint)] text-sm mt-1 max-w-sm mx-auto">
-            Define event flows like: Shopify order &rarr; Stripe payment &rarr;
-            SendGrid email.
-          </p>
-          <Link
-            href="/flows/new"
-            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-[13px] font-medium text-white hover:bg-indigo-400 transition-colors"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Create flow
+    <>
+      <DashTopbar
+        title="Flows"
+        subtitle="multi-step event chains across providers, tracked by correlation key"
+        right={
+          <Link href="/flows/new" className="hw-btn hw-btn-indigo">
+            <Icon name="zap" size={13} /> Create flow
           </Link>
-        </div>
-      ) : (
-        <div className="grid gap-4 fade-up fade-up-1">
-          {userFlows.map((flow) => {
-            const steps = flow.steps as Array<{ eventType: string }>;
-            const stats = statsMap[flow.id];
+        }
+      />
 
-            return (
-              <Link
-                key={flow.id}
-                href={`/flows/${flow.id}`}
-                className="group glass rounded-xl p-5 flex items-center gap-5 transition-all duration-200 hover:border-[var(--border-strong)]"
+      <div
+        className="hw-scroll flex flex-col"
+        style={{
+          padding: "24px 28px 40px",
+          gap: 20,
+          overflow: "auto",
+          flex: 1,
+        }}
+      >
+        {userFlows.length === 0 ? (
+          <section className="hw-fade-up">
+            <div
+              className="hw-panel flex flex-col items-center justify-center"
+              style={{
+                padding: "72px 24px",
+                background: "var(--hw-bg-2)",
+                textAlign: "center",
+                gap: 14,
+              }}
+            >
+              <div
+                className="grid place-items-center"
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: 12,
+                  background: "var(--hw-panel)",
+                  border: "1px solid var(--hw-line)",
+                }}
               >
-                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-400 shrink-0">
-                  <GitBranch className="h-5 w-5" />
-                </div>
-
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-[var(--text-primary)] text-[15px] mb-1">
-                    {flow.name}
-                  </h3>
-                  <div className="flex items-center gap-2 text-[12px] text-[var(--text-faint)]">
-                    <span>{steps.length} steps</span>
-                    <span className="text-[var(--text-ghost)]">&middot;</span>
-                    <span>Timeout: {flow.timeoutMinutes}min</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 mt-1.5">
-                    {steps.map((step, i) => (
-                      <div key={i} className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-mono text-[var(--text-tertiary)] bg-[var(--bg-surface)] px-1.5 py-0.5 rounded">
-                          {step.eventType}
-                        </span>
-                        {i < steps.length - 1 && (
-                          <span className="text-[var(--text-ghost)] text-[10px]">&rarr;</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Instance stats */}
-                {stats && (
-                  <div className="hidden sm:flex items-center gap-4 shrink-0">
-                    <InstanceStat
-                      icon={<Clock className="h-3 w-3 text-indigo-400" />}
-                      count={stats.running}
-                      label="Running"
-                    />
-                    <InstanceStat
-                      icon={<CheckCircle className="h-3 w-3 text-emerald-400" />}
-                      count={stats.completed}
-                      label="Done"
-                    />
-                    <InstanceStat
-                      icon={<XCircle className="h-3 w-3 text-red-400" />}
-                      count={stats.failed + stats.timedOut}
-                      label="Failed"
-                    />
-                  </div>
-                )}
-
-                <ArrowUpRight className="h-4 w-4 text-[var(--text-ghost)] group-hover:text-[var(--text-tertiary)] transition-colors shrink-0" />
+                <Icon name="zap" size={22} color="var(--hw-ink-4)" />
+              </div>
+              <div style={{ fontSize: 15, color: "var(--hw-ink)" }}>
+                No flows defined
+              </div>
+              <div
+                style={{
+                  fontSize: 12.5,
+                  color: "var(--hw-ink-4)",
+                  maxWidth: 380,
+                }}
+              >
+                Model multi-step chains like Shopify order → Stripe payment → SendGrid email. HookWise tracks the instance until every step fires.
+              </div>
+              <Link href="/flows/new" className="hw-btn hw-btn-primary">
+                <Icon name="zap" size={13} /> Create flow
               </Link>
-            );
-          })}
-        </div>
-      )}
-    </div>
+            </div>
+          </section>
+        ) : (
+          <section
+            className="hw-fade-up flex flex-col"
+            style={{ gap: 12 }}
+          >
+            {userFlows.map((flow) => {
+              const steps = flow.steps as Array<{ eventType: string }>;
+              const stats = statsMap.get(flow.id);
+              return (
+                <Link
+                  key={flow.id}
+                  href={`/flows/${flow.id}`}
+                  className="hw-panel flex items-center"
+                  style={{
+                    padding: "18px 22px",
+                    background: "var(--hw-bg-2)",
+                    gap: 20,
+                  }}
+                >
+                  <div
+                    className="grid place-items-center"
+                    style={{
+                      width: 38,
+                      height: 38,
+                      borderRadius: 8,
+                      background: "rgba(129,140,248,0.1)",
+                      border: "1px solid rgba(129,140,248,0.2)",
+                    }}
+                  >
+                    <Icon name="zap" size={18} color="var(--hw-indigo-ink)" />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div
+                      className="flex items-center flex-wrap"
+                      style={{ gap: 10, marginBottom: 4 }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: "var(--hw-ink)",
+                        }}
+                      >
+                        {flow.name}
+                      </span>
+                      <span
+                        className="hw-mono"
+                        style={{ fontSize: 11, color: "var(--hw-ink-4)" }}
+                      >
+                        {steps.length} steps · timeout {flow.timeoutMinutes}m
+                      </span>
+                    </div>
+                    <div
+                      className="flex items-center flex-wrap"
+                      style={{ gap: 6 }}
+                    >
+                      {steps.map((s, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center"
+                          style={{ gap: 6 }}
+                        >
+                          <Chip>{s.eventType}</Chip>
+                          {i < steps.length - 1 && (
+                            <Icon
+                              name="chevron-right"
+                              size={11}
+                              color="var(--hw-ink-5)"
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {stats && (
+                    <div
+                      className="flex items-center"
+                      style={{ gap: 14, color: "var(--hw-ink-3)" }}
+                    >
+                      <MiniStat
+                        label="running"
+                        value={stats.running}
+                        tone="indigo"
+                      />
+                      <MiniStat
+                        label="done"
+                        value={stats.completed}
+                        tone="green"
+                      />
+                      <MiniStat
+                        label="failed"
+                        value={stats.failed}
+                        tone="red"
+                      />
+                    </div>
+                  )}
+                  <Icon
+                    name="chevron-right"
+                    size={14}
+                    color="var(--hw-ink-5)"
+                  />
+                </Link>
+              );
+            })}
+          </section>
+        )}
+      </div>
+    </>
   );
 }
 
-function InstanceStat({
-  icon,
-  count: c,
+function MiniStat({
   label,
+  value,
+  tone,
 }: {
-  icon: React.ReactNode;
-  count: number;
   label: string;
+  value: number;
+  tone: "indigo" | "green" | "red";
 }) {
+  const color =
+    tone === "indigo"
+      ? "var(--hw-indigo-ink)"
+      : tone === "green"
+        ? "var(--hw-green)"
+        : "var(--hw-red)";
   return (
-    <div className="text-center">
-      <div className="flex items-center justify-center gap-1 mb-0.5">
-        {icon}
-        <span className="text-[15px] font-semibold text-[var(--text-primary)] tabular-nums">
-          {c}
-        </span>
+    <div style={{ textAlign: "right" }}>
+      <div
+        className="hw-mono hw-num"
+        style={{ fontSize: 15, fontWeight: 500, color }}
+      >
+        {value}
       </div>
-      <span className="text-[10px] text-[var(--text-faint)] uppercase tracking-wider">
+      <div
+        className="hw-mono"
+        style={{ fontSize: 10, color: "var(--hw-ink-4)", marginTop: 2 }}
+      >
         {label}
-      </span>
+      </div>
     </div>
   );
 }
