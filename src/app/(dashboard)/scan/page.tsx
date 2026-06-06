@@ -26,16 +26,17 @@ export default async function ScanPage() {
   return (
     <>
       <DashTopbar
-        title="Health scanner"
-        subtitle="diff your provider API against ingest log; surface the gap in dollars"
+        title="Scanner"
+        subtitle="diff your provider API against the ingest log · surface gaps in dollars"
       />
       <div
-        className="hw-scroll flex flex-col"
         style={{
-          padding: "24px 28px 40px",
+          padding: "24px 32px 40px",
           gap: 20,
           overflow: "auto",
           flex: 1,
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         <ScannerClient integrations={userIntegrations} />

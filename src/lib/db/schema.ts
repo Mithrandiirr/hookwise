@@ -16,7 +16,8 @@ export const deliveryStatusEnum = pgEnum("delivery_status", ["pending", "deliver
 export const circuitStateEnum = pgEnum("circuit_state", ["closed", "half_open", "open"]);
 export const errorTypeEnum = pgEnum("error_type", ["timeout", "server_error", "rate_limit", "ssl", "connection_refused", "unknown"]);
 export const replayStatusEnum = pgEnum("replay_status", ["pending", "delivering", "delivered", "failed", "skipped"]);
-export const eventSourceEnum = pgEnum("event_source", ["webhook", "reconciliation", "enrichment"]);
+export const eventSourceEnum = pgEnum("event_source", ["webhook", "reconciliation", "enrichment", "onboarding_backfill"]);
+export const backfillStatusEnum = pgEnum("backfill_status", ["pending", "running", "complete", "failed"]);
 export const anomalyTypeEnum = pgEnum("anomaly_type", [
   "response_time_spike",
   "failure_surge",
@@ -145,6 +146,27 @@ export const replayQueue = pgTable("replay_queue", {
   attempts: integer("attempts").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   deliveredAt: timestamp("delivered_at"),
+});
+
+// Day 2 — onboarding backwards-poll tracking. One row per call to the backfill function.
+// Status reads + summary live here so /dashboard/loading can poll without fanning out
+// over the events table.
+export const backfillRuns = pgTable("backfill_runs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  integrationId: uuid("integration_id")
+    .notNull()
+    .references(() => integrations.id),
+  status: backfillStatusEnum("status").notNull().default("pending"),
+  scanned: integer("scanned").notNull().default(0),
+  // Best-known total; for cursor-paginated APIs this is the cap until we discover otherwise.
+  totalEstimate: integer("total_estimate").notNull().default(0),
+  windowDays: integer("window_days").notNull(),
+  maxEvents: integer("max_events").notNull(),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+  // Aggregate snapshot computed once at end — total, top event types, revenue at risk, etc.
+  summary: jsonb("summary"),
+  error: text("error"),
 });
 
 export const reconciliationRuns = pgTable("reconciliation_runs", {

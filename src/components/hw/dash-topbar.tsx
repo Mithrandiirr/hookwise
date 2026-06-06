@@ -11,30 +11,34 @@ export function DashTopbar({
 }) {
   return (
     <header
-      className="flex items-center justify-between"
       style={{
-        padding: "18px 28px",
-        borderBottom: "1px solid var(--hw-line)",
+        padding: "16px 32px",
+        borderBottom: "1px solid var(--hf-line)",
+        background: "var(--hf-overlay)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+        position: "sticky",
+        top: 0,
+        zIndex: 5,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
         gap: 20,
-        background: "var(--hw-bg)",
       }}
     >
       <div style={{ minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: 20,
-            fontWeight: 600,
-            letterSpacing: "-0.02em",
-            color: "var(--hw-ink)",
-          }}
-        >
-          {title}
+        <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13, color: "var(--hf-ink-3)" }}>
+          <span>acme-production</span>
+          <span>/</span>
+          <span style={{ color: "var(--hf-ink)" }}>{title}</span>
         </div>
         {subtitle && (
-          <div style={{ fontSize: 12, color: "var(--hw-ink-3)", marginTop: 2 }}>{subtitle}</div>
+          <div className="hf-mono" style={{ fontSize: 11, color: "var(--hf-ink-4)", marginTop: 4 }}>
+            {subtitle}
+          </div>
         )}
       </div>
-      {right && <div className="flex items-center gap-[10px]">{right}</div>}
+      {right && <div style={{ display: "flex", alignItems: "center", gap: 8 }}>{right}</div>}
     </header>
   );
 }
@@ -49,15 +53,28 @@ export function SectionHeader({
   right?: ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between" style={{ gap: 16 }}>
+    <div className="hf-section-intro" style={{ marginBottom: 0 }}>
       <div>
-        {kicker && <div className="hw-label" style={{ marginBottom: 6 }}>{kicker}</div>}
+        {kicker && (
+          <div
+            className="hf-mono"
+            style={{
+              fontSize: 10.5,
+              color: "var(--hf-ink-4)",
+              textTransform: "uppercase",
+              letterSpacing: "0.12em",
+              marginBottom: 6,
+            }}
+          >
+            {kicker}
+          </div>
+        )}
         <div
           style={{
-            fontSize: 16,
-            fontWeight: 600,
-            letterSpacing: "-0.01em",
-            color: "var(--hw-ink)",
+            fontSize: 17,
+            fontWeight: 500,
+            letterSpacing: "-0.015em",
+            color: "var(--hf-ink)",
           }}
         >
           {title}

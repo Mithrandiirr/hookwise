@@ -14,6 +14,7 @@ import { drainRedisBuffer } from "@/lib/inngest/functions/drain-redis-buffer";
 import { sequenceHoldChecker } from "@/lib/inngest/functions/deliver-webhook";
 import { weeklyReport } from "@/lib/inngest/functions/weekly-report";
 import { providerHealthAggregator } from "@/lib/inngest/functions/provider-health-aggregator";
+import { onboardingBackfill } from "@/lib/inngest/functions/onboarding-backfill";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -33,5 +34,6 @@ export const { GET, POST, PUT } = serve({
     sequenceHoldChecker,
     weeklyReport,
     providerHealthAggregator,
+    onboardingBackfill,
   ],
 });

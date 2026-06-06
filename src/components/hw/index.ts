@@ -10,3 +10,13 @@ export type { IconName } from "./icon";
 export { DashSidebar } from "./dash-sidebar";
 export { DashTopbar, SectionHeader } from "./dash-topbar";
 export { AuthShell, AuthField, AuthError } from "./auth-shell";
+export { TierAwareTile } from "./tier-aware-tile";
+export {
+  PageHead,
+  StatTile,
+  Panel,
+  Pill,
+  ProviderTag,
+  fmtAgo,
+} from "./design-primitives";
+export type { PillTone } from "./design-primitives";

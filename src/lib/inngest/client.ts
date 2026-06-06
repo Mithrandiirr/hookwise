@@ -69,6 +69,17 @@ export type ReconciliationRunEvent = {
   };
 };
 
+export type OnboardingBackfillEvent = {
+  name: "onboarding/backfill";
+  data: {
+    integrationId: string;
+    // Backfill window in days (Day 2: hard-coded 30; left tunable so we can tighten/widen later).
+    windowDays: number;
+    // Hard cap on events so a high-volume signup doesn't immediately exceed free-tier.
+    maxEvents: number;
+  };
+};
+
 export type FlowStepCompletedEvent = {
   name: "flow/step-completed";
   data: {
@@ -104,6 +115,7 @@ export type Events = {
   "webhook/retry": WebhookRetryEvent;
   "anomaly/detected": AnomalyDetectedEvent;
   "reconciliation/run": ReconciliationRunEvent;
+  "onboarding/backfill": OnboardingBackfillEvent;
   "flow/step-completed": FlowStepCompletedEvent;
   "security/scan-requested": SecurityScanRequestedEvent;
   "security/scan-completed": SecurityScanCompletedEvent;

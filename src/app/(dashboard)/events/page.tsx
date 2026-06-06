@@ -78,8 +78,8 @@ export default async function EventsPage() {
   return (
     <>
       <DashTopbar
-        title="Events"
-        subtitle="every webhook, every delivery, every hook into your app"
+        title="Live feed"
+        subtitle="every webhook · every delivery · every retry"
       />
       <EventsStreamClient rows={normalized} />
     </>

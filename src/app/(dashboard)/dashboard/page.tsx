@@ -11,18 +11,12 @@ import {
   anomalies,
   reconciliationRuns,
   replayQueue,
+  backfillRuns,
 } from "@/lib/db";
 import { eq, desc, count, and, gte, inArray, isNull, sql } from "drizzle-orm";
-import {
-  Chip,
-  Dot,
-  Icon,
-  ProviderMark,
-  Sparkline,
-  DashTopbar,
-  SectionHeader,
-} from "@/components/hw";
-import { DashLiveIngest } from "./live-ingest";
+import { resolveOrgTier } from "@/lib/tier";
+import type { BackfillSummary } from "@/lib/inngest/functions/onboarding-backfill";
+import { FirstLoadView } from "./first-load-view";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -38,16 +32,18 @@ export default async function DashboardPage() {
 
   const integrationIds = userIntegrations.map((i) => i.id);
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const [
-    eventsCount,
-    failedCount,
+    eventsLastHourRow,
+    eventsLast24hRow,
+    failedRow,
     userEndpoints,
     openAnomalies,
     revenueRow,
-    reconRuns,
-    replayWaiting,
+    reconRow,
+    replayRow,
     dupesRow,
   ] = await Promise.all([
     integrationIds.length > 0
@@ -58,6 +54,17 @@ export default async function DashboardPage() {
             and(
               inArray(events.integrationId, integrationIds),
               gte(events.receivedAt, oneHourAgo),
+            ),
+          )
+      : Promise.resolve([{ count: 0 }]),
+    integrationIds.length > 0
+      ? db
+          .select({ count: count() })
+          .from(events)
+          .where(
+            and(
+              inArray(events.integrationId, integrationIds),
+              gte(events.receivedAt, twentyFourHoursAgo),
             ),
           )
       : Promise.resolve([{ count: 0 }]),
@@ -75,10 +82,7 @@ export default async function DashboardPage() {
           )
       : Promise.resolve([{ count: 0 }]),
     integrationIds.length > 0
-      ? db
-          .select()
-          .from(endpoints)
-          .where(inArray(endpoints.integrationId, integrationIds))
+      ? db.select().from(endpoints).where(inArray(endpoints.integrationId, integrationIds))
       : Promise.resolve([]),
     integrationIds.length > 0
       ? db
@@ -142,581 +146,787 @@ export default async function DashboardPage() {
       : Promise.resolve([{ count: 0 }]),
   ]);
 
-  const endpointMap = new Map(
-    userEndpoints.map((e) => [e.integrationId, e] as const),
-  );
+  const integrationById = new Map(userIntegrations.map((i) => [i.id, i] as const));
+  const endpointMap = new Map(userEndpoints.map((e) => [e.integrationId, e] as const));
+  const tier = resolveOrgTier(userIntegrations);
 
+  // Hourly bucket query for the HeroBars chart (24 × 1h).
+  const hourlyRows =
+    integrationIds.length > 0
+      ? await db
+          .select({
+            bucket: sql<Date>`date_trunc('hour', ${events.receivedAt})`,
+            count: count(),
+          })
+          .from(events)
+          .where(
+            and(
+              inArray(events.integrationId, integrationIds),
+              gte(events.receivedAt, twentyFourHoursAgo),
+            ),
+          )
+          .groupBy(sql`date_trunc('hour', ${events.receivedAt})`)
+          .orderBy(sql`date_trunc('hour', ${events.receivedAt})`)
+      : [];
+
+  // Densify into exactly 24 buckets ending at the current hour so the bar chart
+  // is always full-width even when there are gaps.
+  const nowHour = new Date();
+  nowHour.setMinutes(0, 0, 0);
+  const hourlyBuckets: number[] = Array.from({ length: 24 }, (_, i) => {
+    const slot = new Date(nowHour.getTime() - (23 - i) * 60 * 60 * 1000);
+    const found = hourlyRows.find((r) => new Date(r.bucket).getTime() === slot.getTime());
+    return Number(found?.count ?? 0);
+  });
+  const hourlyMax = Math.max(1, ...hourlyBuckets);
+  const prior24hCount = 0; // placeholder — would need another query for prior-24h to compute delta
+  const trendPct =
+    prior24hCount > 0
+      ? ((eventsLast24hRow[0]?.count ?? 0) - prior24hCount) / prior24hCount * 100
+      : null;
+
+  // Day 3 — first-load magic moment. If the user just finished onboarding (no live events
+  // in the last 24h but a completed backfill exists), surface the back-poll summary as a
+  // dedicated landing view instead of the normal "Last 24 hours" hero.
+  // Wrapped so a missing backfill_runs table (pre-migration) doesn't crash the dashboard.
+  const latestBackfill = await (async () => {
+    if (integrationIds.length === 0) return null;
+    try {
+      const [row] = await db
+        .select()
+        .from(backfillRuns)
+        .where(
+          and(
+            inArray(backfillRuns.integrationId, integrationIds),
+            eq(backfillRuns.status, "complete"),
+          ),
+        )
+        .orderBy(desc(backfillRuns.completedAt))
+        .limit(1);
+      return row ?? null;
+    } catch (err) {
+      console.warn("[dashboard] backfill_runs query failed — migration likely not applied:", err);
+      return null;
+    }
+  })();
+
+  const eventsLastHour = eventsLastHourRow[0]?.count ?? 0;
+  const eventsLast24h = eventsLast24hRow[0]?.count ?? 0;
+  const failedLastHour = failedRow[0]?.count ?? 0;
   const revenueProtected = (revenueRow[0]?.amount ?? 0) / 100;
-  const gapsReconciled = reconRuns[0]?.gaps ?? 0;
-  const replayQueued = replayWaiting[0]?.count ?? 0;
+  const gapsReconciled = reconRow[0]?.gaps ?? 0;
+  const replayQueued = replayRow[0]?.count ?? 0;
   const dupesCount = dupesRow[0]?.count ?? 0;
-  const eventsLastHour = eventsCount[0]?.count ?? 0;
-  const failedLastHour = failedCount[0]?.count ?? 0;
-  const successRate = eventsLastHour > 0
-    ? 100 - (failedLastHour / Math.max(eventsLastHour, 1)) * 100
-    : 100;
 
-  const top = openAnomalies[0];
-  const topDiagnosis = (top?.diagnosis as { summary?: string } | null)?.summary;
+  const successRate =
+    eventsLastHour > 0
+      ? 100 - (failedLastHour / Math.max(eventsLastHour, 1)) * 100
+      : 100;
+
+  // Group by provider for the "By provider" panel
+  const providerStats = new Map<
+    string,
+    { count: number; parity: number; p95: number; status: "healthy" | "degraded" | "down" }
+  >();
+  for (const integration of userIntegrations) {
+    const ep = endpointMap.get(integration.id);
+    const cur = providerStats.get(integration.provider) ?? {
+      count: 0,
+      parity: 100,
+      p95: 0,
+      status: "healthy" as const,
+    };
+    cur.count += 1;
+    if (ep) {
+      cur.parity = Math.min(cur.parity, ep.successRate ?? 100);
+      cur.p95 = Math.max(cur.p95, ep.avgResponseMs ?? 0);
+      if (ep.circuitState === "open") cur.status = "down";
+      else if (ep.circuitState === "half_open" && cur.status === "healthy") cur.status = "degraded";
+    }
+    providerStats.set(integration.provider, cur);
+  }
+
+  const PROVIDER_COLOR: Record<string, string> = {
+    stripe: "#9ac7ff",
+    shopify: "#9ec396",
+    clerk: "#c4a5ff",
+    resend: "#f2b37a",
+    github: "#fbbf24",
+  };
+
+  const providerRows = Array.from(providerStats.entries()).map(([provider, s]) => ({
+    name: provider,
+    color: PROVIDER_COLOR[provider] ?? "var(--hf-ink-2)",
+    count: s.count,
+    parity: s.parity,
+    p95: Math.round(s.p95),
+    status: s.status,
+  }));
+
+  // First-load: no live events yet, but the back-poll left us numbers to show.
+  const isFirstLoad =
+    eventsLast24h === 0 && latestBackfill != null && latestBackfill.summary != null;
+
+  if (isFirstLoad && latestBackfill) {
+    const integration = integrationById.get(latestBackfill.integrationId);
+    return (
+      <FirstLoadView
+        summary={latestBackfill.summary as BackfillSummary}
+        integrationId={latestBackfill.integrationId}
+        provider={integration?.provider ?? "unknown"}
+        revenueTrackingEnabled={tier.revenueTrackingEnabled}
+      />
+    );
+  }
 
   return (
     <>
-      <DashTopbar
-        title="Overview"
-        subtitle="Webhook operations · live"
-        right={
-          <>
-            <div
-              className="flex items-center"
-              style={{
-                gap: 8,
-                padding: "6px 10px",
-                border: "1px solid var(--hw-line-2)",
-                borderRadius: 7,
-              }}
-            >
-              <Dot tone="green" />
-              <span
-                className="hw-mono"
-                style={{ fontSize: 11, color: "var(--hw-ink-2)" }}
-              >
-                ingesting · {eventsLastHour.toLocaleString()} / hr
-              </span>
-            </div>
-            <button className="hw-btn hw-btn-ghost" type="button">
-              <Icon name="filter" size={13} /> Last 24h
-            </button>
-            <Link href="/integrations/new" className="hw-btn hw-btn-indigo">
-              <Icon name="plug" size={13} /> New integration
-            </Link>
-          </>
-        }
-      />
-
+      {/* Sticky topbar */}
       <div
-        className="hw-scroll flex flex-col"
         style={{
-          padding: "24px 28px 40px",
-          gap: 24,
-          overflow: "auto",
-          flex: 1,
+          padding: "16px 32px",
+          borderBottom: "1px solid var(--hf-line)",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          background: "var(--hf-overlay)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
+          position: "sticky",
+          top: 0,
+          zIndex: 5,
         }}
       >
-        {/* Hero strip */}
-        <section
-          className="hw-fade-up grid"
-          style={{ gridTemplateColumns: "1.4fr 1fr", gap: 16 }}
-        >
+        <div style={{ display: "flex", gap: 6, alignItems: "center", fontSize: 13, color: "var(--hf-ink-3)" }}>
+          <span>acme-production</span>
+          <span>/</span>
+          <span style={{ color: "var(--hf-ink)" }}>Overview</span>
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <div
-            className="hw-panel relative overflow-hidden"
+            className="hf-mono"
             style={{
-              padding: 28,
-              background:
-                "linear-gradient(180deg, rgba(129,140,248,0.05), transparent 60%), var(--hw-bg-2)",
+              background: "var(--hf-bg-3)",
+              border: "1px solid var(--hf-line)",
+              borderRadius: 8,
+              padding: "6px 12px",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 12.5,
+              color: "var(--hf-ink-3)",
+              minWidth: 320,
             }}
           >
-            <div
-              className="flex items-start justify-between"
-              style={{ gap: 24 }}
-            >
-              <div>
-                <div className="hw-label">Revenue protected · rolling 30d</div>
-                <div
-                  className="hw-mono hw-num hw-display"
-                  style={{ fontSize: 54, color: "var(--hw-ink)", marginTop: 10 }}
-                >
-                  ${revenueProtected.toLocaleString(undefined, {
-                    maximumFractionDigits: 0,
-                  })}
-                </div>
-                <div
-                  className="flex items-center"
-                  style={{ marginTop: 8, gap: 10, fontSize: 12 }}
-                >
-                  <span className="hw-chip green">{successRate.toFixed(1)}% success</span>
-                  <span style={{ color: "var(--hw-ink-3)" }}>
-                    <span className="hw-mono">{eventsLastHour.toLocaleString()}</span>{" "}
-                    events in the last hour
-                  </span>
-                </div>
-              </div>
-              <Sparkline
-                data={[0.2, 0.3, 0.25, 0.4, 0.35, 0.5, 0.55, 0.48, 0.7, 0.65, 0.82, 0.9, 0.85, 0.95]}
-                width={220}
-                height={64}
-                gradId="rev-grad-dash"
-              />
+            <span>⌕</span>
+            <span style={{ flex: 1 }}>Search events, customers, endpoints…</span>
+            <span style={{ background: "rgba(255,255,255,0.04)", padding: "1px 6px", borderRadius: 4, fontSize: 10 }}>
+              ⌘K
+            </span>
+          </div>
+          <button className="hf-btn outline small" type="button">
+            Last 24h ⌄
+          </button>
+          <Link href="/integrations/new" className="hf-btn pill small">
+            + Endpoint
+          </Link>
+        </div>
+      </div>
+
+      <div style={{ padding: 32, overflow: "auto", flex: 1 }}>
+        {/* Flat control-board hero (matches .design overview) */}
+        <section
+          style={{
+            border: "1px solid var(--hf-line)",
+            borderRadius: 16,
+            background: "var(--hf-bg-2)",
+            marginBottom: 24,
+            overflow: "hidden",
+          }}
+        >
+          {/* meta strip */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "12px 28px",
+              borderBottom: "1px solid var(--hf-line)",
+              fontFamily: "var(--font-jetbrains-mono), monospace",
+              fontSize: 11,
+              color: "var(--hf-ink-4)",
+              letterSpacing: "0.06em",
+              textTransform: "uppercase",
+              flexWrap: "wrap",
+              gap: 18,
+            }}
+          >
+            <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
+              <span>acme-production</span>
+              <span style={{ color: "var(--hf-ink-4)" }}>·</span>
+              <span>last 24h</span>
+              <span style={{ color: "var(--hf-ink-4)" }}>·</span>
+              <span>region us-east-1</span>
             </div>
-            <div
-              className="grid"
-              style={{
-                marginTop: 24,
-                gridTemplateColumns: "repeat(4,1fr)",
-                gap: 16,
-                paddingTop: 20,
-                borderTop: "1px solid var(--hw-line)",
-              }}
-            >
-              <MetricTile
-                label="Gaps reconciled"
-                value={gapsReconciled.toString()}
-                sub="30d"
-              />
-              <MetricTile
-                label="Replay queued"
-                value={replayQueued.toString()}
-                sub={replayQueued === 0 ? "all caught up" : "pending"}
-              />
-              <MetricTile
-                label="Dedup'd dupes"
-                value={dupesCount.toLocaleString()}
-                sub="idempotency"
-              />
-              <MetricTile
-                label="Open anomalies"
-                value={openAnomalies.length.toString()}
-                sub={openAnomalies.length === 0 ? "clean" : "investigating"}
-              />
+            <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+              <span style={{ display: "inline-flex", gap: 6, alignItems: "center", color: "var(--hf-ink-2)" }}>
+                <span className="hf-dot-live" /> live
+              </span>
+              <span>
+                updated{" "}
+                <span style={{ color: "var(--hf-ink-2)" }}>just now</span>
+              </span>
             </div>
           </div>
 
-          <DashLiveIngest initial={eventsLastHour} failed={failedLastHour} />
+          {/* display block — number + bars */}
+          <div
+            style={{
+              padding: "32px 32px 28px",
+              display: "grid",
+              gridTemplateColumns: "auto 1fr",
+              gap: 40,
+              alignItems: "flex-end",
+            }}
+          >
+            <div>
+              <div className="hf-eyebrow" style={{ marginBottom: 10 }}>
+                events processed
+              </div>
+              <div
+                className="hf-num"
+                style={{
+                  fontSize: 84,
+                  fontWeight: 450,
+                  letterSpacing: "-0.045em",
+                  lineHeight: 0.9,
+                  color: "var(--hf-ink)",
+                }}
+              >
+                {eventsLast24h.toLocaleString()}
+              </div>
+              <div
+                style={{
+                  marginTop: 14,
+                  display: "flex",
+                  gap: 14,
+                  alignItems: "center",
+                  fontSize: 13,
+                  color: "var(--hf-ink-3)",
+                  flexWrap: "wrap",
+                }}
+              >
+                {trendPct !== null && (
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      gap: 5,
+                      alignItems: "center",
+                      color: trendPct >= 0 ? "var(--hf-accent)" : "#f29a9a",
+                      fontWeight: 500,
+                    }}
+                  >
+                    <span style={{ fontSize: 10 }}>{trendPct >= 0 ? "▲" : "▼"}</span>
+                    {Math.abs(trendPct).toFixed(1)}%
+                  </span>
+                )}
+                {trendPct !== null && <span>vs prior 24h</span>}
+                {trendPct !== null && (
+                  <span style={{ color: "var(--hf-ink-4)" }}>·</span>
+                )}
+                <span>{openAnomalies.length} incidents</span>
+                <span style={{ color: "var(--hf-ink-4)" }}>·</span>
+                <span>{replayQueued} in DLQ</span>
+              </div>
+            </div>
+
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 10,
+                  fontFamily: "var(--font-jetbrains-mono), monospace",
+                  fontSize: 10.5,
+                  color: "var(--hf-ink-4)",
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                }}
+              >
+                <span>ingest rate · 60 min buckets</span>
+                <span>
+                  <span style={{ color: "var(--hf-accent)" }}>●</span> current window
+                </span>
+              </div>
+              <HeroBars values={hourlyBuckets} max={hourlyMax} />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontFamily: "var(--font-jetbrains-mono), monospace",
+                  fontSize: 10,
+                  color: "var(--hf-ink-4)",
+                  marginTop: 6,
+                }}
+              >
+                <span>−24h</span>
+                <span>−18h</span>
+                <span>−12h</span>
+                <span>−6h</span>
+                <span>now</span>
+              </div>
+            </div>
+          </div>
+
+          {/* KPI row — flat hairline separators (no card borders) */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              borderTop: "1px solid var(--hf-line)",
+            }}
+          >
+            {[
+              {
+                l: "DELIVERED",
+                v: (eventsLast24h - failedLastHour).toLocaleString(),
+                sub: `${successRate.toFixed(2)}% rate`,
+                color: "#7ed98a",
+              },
+              tier.revenueTrackingEnabled
+                ? {
+                    l: "REVENUE PROTECTED",
+                    v: `$${(revenueProtected / 1000).toFixed(1)}K`,
+                    sub: `+${gapsReconciled} via reconciler`,
+                    color: "var(--hf-accent-warm)",
+                  }
+                : {
+                    l: "AUTO-RECOVERED",
+                    v: gapsReconciled.toLocaleString(),
+                    sub: tier.reconciliationEnabled
+                      ? "via reconciler · 30d"
+                      : "connect a provider",
+                    color: "var(--hf-accent)",
+                  },
+              {
+                l: "P95 LATENCY",
+                v: Math.round(
+                  userEndpoints.reduce((m, e) => Math.max(m, e.avgResponseMs ?? 0), 0),
+                ).toString(),
+                unit: "ms",
+                sub: "ack to provider",
+                color: "var(--hf-ink)",
+              },
+              {
+                l: "MTTR",
+                v: "4.6",
+                unit: "s",
+                sub: "median diagnose",
+                color: "var(--hf-accent)",
+              },
+            ].map((k, i) => (
+              <div
+                key={k.l}
+                style={{
+                  padding: "20px 28px",
+                  borderLeft: i > 0 ? "1px solid var(--hf-line)" : "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: 6,
+                }}
+              >
+                <div
+                  className="hf-mono"
+                  style={{
+                    fontSize: 10.5,
+                    color: "var(--hf-ink-4)",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {k.l}
+                </div>
+                <div
+                  className="hf-num"
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 500,
+                    letterSpacing: "-0.025em",
+                    color: k.color,
+                    display: "flex",
+                    alignItems: "baseline",
+                    gap: 4,
+                  }}
+                >
+                  {k.v}
+                  {"unit" in k && k.unit && (
+                    <span
+                      style={{
+                        fontSize: 14,
+                        color: "var(--hf-ink-4)",
+                        fontWeight: 400,
+                      }}
+                    >
+                      {k.unit}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 11.5, color: "var(--hf-ink-3)" }}>{k.sub}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* status rail */}
+          <div
+            style={{
+              display: "flex",
+              gap: 24,
+              padding: "12px 28px",
+              borderTop: "1px solid var(--hf-line)",
+              background: "var(--hf-bg)",
+              fontFamily: "var(--font-jetbrains-mono), monospace",
+              fontSize: 11,
+              color: "var(--hf-ink-3)",
+              letterSpacing: "0.02em",
+              flexWrap: "wrap",
+            }}
+          >
+            {(
+              [
+                ["ingest", eventsLastHour > 0 ? "nominal" : "idle", eventsLastHour > 0 ? "var(--hf-accent)" : "var(--hf-ink-4)"],
+                ["reconciler", gapsReconciled > 0 ? `+${gapsReconciled} recovered · 30d` : "synced", "var(--hf-accent)"],
+                ["replay", replayQueued > 0 ? `${replayQueued} queued` : "0 queued", replayQueued > 0 ? "#fbbf24" : "var(--hf-accent)"],
+                ["dedup", `${dupesCount.toLocaleString()} · 30d`, "var(--hf-accent)"],
+                ["anomalies", openAnomalies.length > 0 ? `${openAnomalies.length} active` : "0 active", openAnomalies.length > 0 ? "#fbbf24" : "var(--hf-accent)"],
+                ["alerts", "armed", "var(--hf-accent)"],
+              ] as Array<[string, string, string]>
+            ).map(([n, s, c]) => (
+              <span key={n} style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+                <span style={{ color: c, fontSize: 8 }}>●</span>
+                <span style={{ color: "var(--hf-ink-4)" }}>{n}</span>
+                <span style={{ color: "var(--hf-ink-2)" }}>{s}</span>
+              </span>
+            ))}
+          </div>
         </section>
 
         {/* Active anomaly banner */}
-        {top && (
-          <section className="hw-fade-up hw-fade-up-1">
-            <div
-              className="hw-panel flex items-center"
-              style={{
-                padding: "18px 20px",
-                background:
-                  "linear-gradient(90deg, rgba(251,191,36,0.06), transparent 60%)",
-                borderColor: "rgba(251,191,36,0.25)",
-                gap: 16,
-              }}
-            >
-              <div className="flex items-center" style={{ gap: 10 }}>
-                <Dot tone="amber" />
-                <span
-                  className="hw-mono"
-                  style={{
-                    fontSize: 11,
-                    color: "var(--hw-amber)",
-                    letterSpacing: "0.1em",
-                  }}
-                >
-                  ACTIVE ANOMALY
-                </span>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, color: "var(--hw-ink)" }}>
-                  {topDiagnosis ?? (
-                    <>
-                      <span className="hw-mono" style={{ color: "var(--hw-indigo-ink)" }}>
-                        {top.type}
-                      </span>{" "}
-                      detected — severity {top.severity}
-                    </>
-                  )}
-                </div>
-                <div
-                  className="hw-mono"
-                  style={{ fontSize: 11, color: "var(--hw-ink-4)", marginTop: 4 }}
-                >
-                  INC-{top.id.slice(0, 8)} · detected{" "}
-                  {new Date(top.detectedAt).toLocaleTimeString()}
-                </div>
-              </div>
-              <Link
-                href={`/anomalies/${top.id}`}
-                className="hw-btn hw-btn-ghost"
+        {openAnomalies[0] && (
+          <div
+            style={{
+              padding: "18px 20px",
+              background:
+                "linear-gradient(90deg, rgba(251,191,36,0.06), transparent 60%), var(--hf-bg-3)",
+              border: "1px solid rgba(251,191,36,0.25)",
+              borderRadius: 14,
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              marginBottom: 24,
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ width: 6, height: 6, borderRadius: 999, background: "#fbbf24" }} />
+              <span
+                className="hf-mono"
+                style={{ fontSize: 11, color: "#fbbf24", letterSpacing: "0.1em" }}
               >
-                Open investigation <Icon name="arrow-up-right" size={12} />
-              </Link>
+                ACTIVE ANOMALY
+              </span>
             </div>
-          </section>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, color: "var(--hf-ink)" }}>
+                {(openAnomalies[0].diagnosis as { summary?: string } | null)?.summary ?? (
+                  <>
+                    <span className="hf-mono" style={{ color: "var(--hf-violet)" }}>
+                      {openAnomalies[0].type}
+                    </span>{" "}
+                    detected — severity {openAnomalies[0].severity}
+                  </>
+                )}
+              </div>
+              <div className="hf-mono" style={{ fontSize: 11, color: "var(--hf-ink-4)", marginTop: 4 }}>
+                INC-{openAnomalies[0].id.slice(0, 8)} · detected{" "}
+                {new Date(openAnomalies[0].detectedAt).toLocaleTimeString()}
+              </div>
+            </div>
+            <Link href={`/anomalies/${openAnomalies[0].id}`} className="hf-btn outline small">
+              Open investigation →
+            </Link>
+          </div>
         )}
 
-        {/* Main grid: integrations + side rail */}
-        <section
-          className="hw-fade-up hw-fade-up-2 grid"
-          style={{ gridTemplateColumns: "1.6fr 1fr", gap: 16 }}
-        >
+        {/* By provider + Activity */}
+        <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 16, marginBottom: 24 }}>
+          {/* By provider */}
           <div
-            className="hw-panel overflow-hidden"
-            style={{ background: "var(--hw-bg-2)" }}
+            style={{
+              background: "var(--hf-bg-3)",
+              border: "1px solid var(--hf-line)",
+              borderRadius: 14,
+              padding: "22px 24px",
+            }}
           >
-            <div
-              className="flex items-center justify-between"
-              style={{
-                padding: "16px 20px",
-                borderBottom: "1px solid var(--hw-line)",
-              }}
-            >
-              <SectionHeader title="Integrations" />
-              <Link
-                href="/integrations"
-                className="hw-btn hw-btn-ghost"
-                style={{ padding: "6px 10px", fontSize: 12 }}
-              >
-                View all · {userIntegrations.length}
+            <div className="hf-section-intro" style={{ marginBottom: 4 }}>
+              <h2 style={{ fontSize: 17, fontWeight: 500, letterSpacing: "-0.015em", margin: 0 }}>By provider</h2>
+              <Link href="/integrations" className="hf-link-accent">
+                All endpoints →
               </Link>
             </div>
-            {userIntegrations.length === 0 ? (
+            <div
+              className="hf-mono"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "200px 1fr 90px 90px 90px 100px",
+                gap: 16,
+                padding: "14px 0 8px",
+                fontSize: 10.5,
+                color: "var(--hf-ink-4)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                borderBottom: "1px solid var(--hf-line)",
+              }}
+            >
+              <span>Provider</span>
+              <span>Parity</span>
+              <span style={{ textAlign: "right" }}>Events</span>
+              <span style={{ textAlign: "right" }}>Parity %</span>
+              <span style={{ textAlign: "right" }}>p95</span>
+              <span style={{ justifySelf: "end" }}>Status</span>
+            </div>
+            {providerRows.length === 0 ? (
               <div
-                className="flex flex-col items-center justify-center"
-                style={{ padding: "48px 24px", textAlign: "center", gap: 12 }}
+                style={{
+                  padding: "32px 16px",
+                  textAlign: "center",
+                  fontSize: 13,
+                  color: "var(--hf-ink-4)",
+                }}
               >
-                <div
-                  className="grid place-items-center"
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 10,
-                    background: "var(--hw-panel)",
-                    border: "1px solid var(--hw-line)",
-                  }}
-                >
-                  <Icon name="plug" size={20} color="var(--hw-ink-4)" />
-                </div>
-                <div style={{ fontSize: 14, color: "var(--hw-ink-2)" }}>
-                  No integrations yet
-                </div>
-                <Link href="/integrations/new" className="hw-btn hw-btn-indigo">
-                  Add your first integration
+                No integrations yet.{" "}
+                <Link href="/integrations/new" className="hf-link-accent">
+                  Add your first →
                 </Link>
               </div>
             ) : (
-              <table className="hw-table">
-                <thead>
-                  <tr>
-                    <th>Integration</th>
-                    <th>Provider</th>
-                    <th>Success</th>
-                    <th>p95</th>
-                    <th>Health</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {userIntegrations.slice(0, 6).map((integration) => {
-                    const endpoint = endpointMap.get(integration.id);
-                    const health = endpoint?.circuitState ?? "closed";
-                    const success = endpoint?.successRate ?? 100;
-                    const p95 = endpoint?.avgResponseMs ?? 0;
-                    return (
-                      <tr key={integration.id}>
-                        <td>
-                          <Link
-                            href={`/integrations/${integration.id}`}
-                            className="hw-mono"
-                            style={{ fontSize: 12.5, color: "var(--hw-ink)" }}
-                          >
-                            {integration.name}
-                          </Link>
-                        </td>
-                        <td>
-                          <div
-                            className="flex items-center"
-                            style={{ gap: 8 }}
-                          >
-                            <ProviderMark provider={integration.provider} size={16} />
-                            <span
-                              style={{
-                                color: "var(--hw-ink-2)",
-                                textTransform: "capitalize",
-                              }}
-                            >
-                              {integration.provider}
-                            </span>
-                          </div>
-                        </td>
-                        <td
-                          className="hw-mono hw-num"
-                          style={{
-                            color: success < 95 ? "var(--hw-amber)" : "var(--hw-ink-2)",
-                          }}
-                        >
-                          {success.toFixed(1)}%
-                        </td>
-                        <td
-                          className="hw-mono hw-num"
-                          style={{
-                            color:
-                              p95 > 400 ? "var(--hw-amber)" : "var(--hw-ink-3)",
-                          }}
-                        >
-                          {Math.round(p95)}ms
-                        </td>
-                        <td>
-                          {health === "closed" && (
-                            <Chip tone="green">
-                              <Dot tone="green" quiet /> Healthy
-                            </Chip>
-                          )}
-                          {health === "half_open" && (
-                            <Chip tone="amber">
-                              <Dot tone="amber" quiet /> Degraded
-                            </Chip>
-                          )}
-                          {health === "open" && (
-                            <Chip tone="red">
-                              <Dot tone="red" quiet /> Down
-                            </Chip>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+              providerRows.map((r) => (
+                <ProviderRow
+                  key={r.name}
+                  name={r.name}
+                  color={r.color}
+                  count={r.count.toLocaleString()}
+                  parity={`${r.parity.toFixed(2)}%`}
+                  parityPct={r.parity}
+                  p95={`${r.p95}ms`}
+                  status={r.status}
+                />
+              ))
             )}
           </div>
 
-          <div className="flex flex-col" style={{ gap: 16 }}>
-            <div
-              className="hw-panel"
-              style={{ padding: "18px 20px", background: "var(--hw-bg-2)" }}
-            >
-              <div
-                className="flex items-center justify-between"
-                style={{ marginBottom: 14 }}
-              >
-                <SectionHeader title="Provider health" />
-                <span
-                  className="hw-mono"
-                  style={{ fontSize: 10, color: "var(--hw-ink-4)" }}
-                >
-                  cross-customer
-                </span>
-              </div>
-              {(
-                [
-                  { p: "stripe", s: 99.97, tone: "green" as const },
-                  { p: "shopify", s: 97.84, tone: "amber" as const },
-                  { p: "github", s: 99.99, tone: "green" as const },
-                ]
-              ).map((x, i) => (
+          {/* Activity rail */}
+          <div
+            style={{
+              background: "var(--hf-bg-3)",
+              border: "1px solid var(--hf-line)",
+              borderRadius: 14,
+              padding: "22px 24px",
+            }}
+          >
+            <div className="hf-section-intro" style={{ marginBottom: 14 }}>
+              <h2 style={{ fontSize: 17, fontWeight: 500, letterSpacing: "-0.015em", margin: 0 }}>Activity</h2>
+              <Link href="/events" className="hf-link-accent">
+                All →
+              </Link>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {(openAnomalies.length > 0 || gapsReconciled > 0
+                ? [
+                    ...(openAnomalies[0]
+                      ? [
+                          [
+                            "✦",
+                            "var(--hf-accent)",
+                            `Investigation queued · ${openAnomalies[0].type}`,
+                            timeAgo(openAnomalies[0].detectedAt),
+                          ] as const,
+                        ]
+                      : []),
+                    ...(gapsReconciled > 0
+                      ? [
+                          [
+                            "⟲",
+                            "#9ec396",
+                            `Reconciler recovered ${gapsReconciled} events`,
+                            "30d",
+                          ] as const,
+                        ]
+                      : []),
+                    ...(replayQueued > 0
+                      ? [
+                          [
+                            "⏱",
+                            "#fbbf24",
+                            `${replayQueued} events queued for replay`,
+                            "now",
+                          ] as const,
+                        ]
+                      : []),
+                    ["✓", "#7ed98a", `${dupesCount.toLocaleString()} dedup'd duplicates · 30d`, "30d"] as const,
+                  ]
+                : ([
+                    ["✓", "#7ed98a", "Everything is flowing — no incidents", "now"],
+                    ["⟲", "#9ec396", `${gapsReconciled} reconciler runs in the last 30 days`, "30d"],
+                    ["✓", "#7ed98a", `${dupesCount.toLocaleString()} dedup'd duplicates`, "30d"],
+                  ] as const)
+              ).map((r, i, arr) => (
                 <div
-                  key={x.p}
-                  className="flex items-center"
+                  key={i}
                   style={{
+                    display: "grid",
+                    gridTemplateColumns: "20px 1fr auto",
                     gap: 12,
-                    padding: "10px 0",
-                    borderTop: i ? "1px solid var(--hw-line)" : "none",
+                    alignItems: "flex-start",
+                    paddingBottom: 10,
+                    borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none",
                   }}
                 >
-                  <ProviderMark provider={x.p} size={18} />
+                  <span style={{ color: r[1], fontSize: 14, paddingTop: 1 }}>{r[0]}</span>
+                  <span style={{ fontSize: 12.5, color: "var(--hf-ink-2)", lineHeight: 1.45 }}>{r[2]}</span>
                   <span
-                    style={{ flex: 1, fontSize: 13, textTransform: "capitalize" }}
+                    className="hf-mono"
+                    style={{ fontSize: 11, color: "var(--hf-ink-4)", paddingTop: 2 }}
                   >
-                    {x.p}
-                  </span>
-                  <div
-                    style={{
-                      width: 80,
-                      height: 4,
-                      background: "var(--hw-ink-6)",
-                      borderRadius: 2,
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${x.s}%`,
-                        height: "100%",
-                        background: `var(--hw-${x.tone})`,
-                      }}
-                    />
-                  </div>
-                  <span
-                    className="hw-mono hw-num"
-                    style={{ fontSize: 12, color: `var(--hw-${x.tone})` }}
-                  >
-                    {x.s.toFixed(2)}%
+                    {r[3]}
                   </span>
                 </div>
               ))}
             </div>
-
-            <div
-              className="hw-panel overflow-hidden"
-              style={{ background: "var(--hw-bg-2)" }}
-            >
-              <div
-                style={{
-                  padding: "16px 20px",
-                  borderBottom: "1px solid var(--hw-line)",
-                }}
-              >
-                <SectionHeader title="Top issues" />
-              </div>
-              <div>
-                {openAnomalies.length === 0 ? (
-                  <div
-                    style={{
-                      padding: "28px 20px",
-                      textAlign: "center",
-                      fontSize: 12,
-                      color: "var(--hw-ink-4)",
-                    }}
-                  >
-                    No open issues. Everything is flowing.
-                  </div>
-                ) : (
-                  openAnomalies.slice(0, 3).map((a, i) => (
-                    <Link
-                      key={a.id}
-                      href={`/anomalies/${a.id}`}
-                      className="flex items-center"
-                      style={{
-                        padding: "12px 20px",
-                        borderTop: i ? "1px solid var(--hw-line)" : "none",
-                        gap: 10,
-                      }}
-                    >
-                      <Dot
-                        tone={
-                          a.severity === "critical" || a.severity === "high"
-                            ? "red"
-                            : a.severity === "medium"
-                              ? "amber"
-                              : "indigo"
-                        }
-                        quiet
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 12.5, color: "var(--hw-ink)" }}>
-                          {a.type}
-                        </div>
-                        <div
-                          className="hw-mono"
-                          style={{
-                            fontSize: 11,
-                            color: "var(--hw-ink-4)",
-                            marginTop: 2,
-                          }}
-                        >
-                          sev · {a.severity} · {new Date(a.detectedAt).toLocaleTimeString()}
-                        </div>
-                      </div>
-                      <Icon name="chevron-right" size={14} color="var(--hw-ink-5)" />
-                    </Link>
-                  ))
-                )}
-              </div>
-            </div>
           </div>
-        </section>
+        </div>
 
-        {/* Bottom strip */}
-        <section
-          className="hw-fade-up hw-fade-up-3 grid"
-          style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}
-        >
-          <BottomTile
-            kicker="Reconciliation"
-            value={gapsReconciled.toString()}
-            unit="gaps recovered · 30d"
-            sub={gapsReconciled > 0 ? "running auto-poll" : "no gaps recently"}
-            icon="refresh"
-            tone="green"
-          />
-          <BottomTile
-            kicker="Replay queue"
-            value={replayQueued.toString()}
-            unit="events waiting"
-            sub={replayQueued === 0 ? "all caught up" : "delivering"}
-            icon="replay"
-            tone={replayQueued === 0 ? "green" : "indigo"}
-          />
-          <BottomTile
-            kicker="AI investigations"
-            value={openAnomalies.length.toString()}
-            unit="active"
-            sub="avg 4m to diagnosis"
-            icon="brain"
-            tone="indigo"
-          />
-        </section>
       </div>
     </>
   );
 }
 
-function MetricTile({
-  label,
-  value,
-  sub,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-}) {
+function timeAgo(d: Date | string) {
+  const ms = Date.now() - new Date(d).getTime();
+  const m = Math.floor(ms / 60000);
+  if (m < 1) return "now";
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h`;
+  return `${Math.floor(h / 24)}d`;
+}
+
+function HeroBars({ values, max }: { values: number[]; max: number }) {
   return (
-    <div>
-      <div className="hw-label">{label}</div>
-      <div
-        className="hw-mono hw-num"
-        style={{ fontSize: 22, fontWeight: 500, marginTop: 4 }}
-      >
-        {value}
-      </div>
-      <div
-        className="hw-mono"
-        style={{ fontSize: 10, color: "var(--hw-ink-4)", marginTop: 2 }}
-      >
-        {sub}
-      </div>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "flex-end",
+        gap: 3,
+        height: 72,
+        padding: "0 0 6px",
+      }}
+    >
+      {values.map((v, i) => {
+        const isLast = i >= values.length - 3;
+        const h = max > 0 ? Math.max(2, (v / max) * 100) : 2;
+        return (
+          <div
+            key={i}
+            style={{
+              flex: 1,
+              height: `${h}%`,
+              background: isLast ? "var(--hf-accent)" : "rgba(255,255,255,0.16)",
+              borderRadius: 1,
+              transition: "background 200ms",
+            }}
+          />
+        );
+      })}
     </div>
   );
 }
 
-function BottomTile({
-  kicker,
-  value,
-  unit,
-  sub,
-  icon,
-  tone,
+function ProviderRow({
+  name,
+  color,
+  count,
+  parity,
+  parityPct,
+  p95,
+  status,
 }: {
-  kicker: string;
-  value: string;
-  unit: string;
-  sub: string;
-  icon: "refresh" | "replay" | "brain";
-  tone: "green" | "indigo" | "amber";
+  name: string;
+  color: string;
+  count: string;
+  parity: string;
+  parityPct: number;
+  p95: string;
+  status: "healthy" | "degraded" | "down";
 }) {
   return (
     <div
-      className="hw-panel"
-      style={{ padding: "18px 20px", background: "var(--hw-bg-2)" }}
+      style={{
+        display: "grid",
+        gridTemplateColumns: "200px 1fr 90px 90px 90px 100px",
+        gap: 16,
+        alignItems: "center",
+        padding: "14px 0",
+        borderBottom: "1px solid var(--hf-line)",
+      }}
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <div className="hw-label">{kicker}</div>
-          <div
-            className="hw-mono hw-num"
-            style={{ fontSize: 26, fontWeight: 500, marginTop: 6 }}
-          >
-            {value}
-          </div>
-          <div
-            className="hw-mono"
-            style={{ fontSize: 11, color: "var(--hw-ink-4)", marginTop: 2 }}
-          >
-            {unit}
-          </div>
-        </div>
-        <Icon
-          name={icon}
-          size={16}
-          color={tone === "indigo" ? "var(--hw-indigo-ink)" : `var(--hw-${tone})`}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <span style={{ width: 8, height: 8, borderRadius: 999, background: color }} />
+        <span style={{ fontWeight: 500, color: "var(--hf-ink)", fontSize: 13.5, textTransform: "capitalize" }}>
+          {name}
+        </span>
+      </div>
+      <div style={{ height: 6, borderRadius: 3, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
+        <div
+          style={{
+            height: "100%",
+            width: `${Math.max(0, Math.min(100, parityPct))}%`,
+            background: color,
+          }}
         />
       </div>
-      <div style={{ marginTop: 14, fontSize: 12, color: "var(--hw-ink-2)" }}>
-        {sub}
-      </div>
+      <span className="hf-num" style={{ fontSize: 12.5, color: "var(--hf-ink-2)", textAlign: "right" }}>
+        {count}
+      </span>
+      <span className="hf-num" style={{ fontSize: 12.5, color: "var(--hf-ink)", textAlign: "right" }}>
+        {parity}
+      </span>
+      <span className="hf-num" style={{ fontSize: 12.5, color: "var(--hf-ink-2)", textAlign: "right" }}>
+        {p95}
+      </span>
+      <span
+        style={{
+          fontSize: 11,
+          padding: "3px 8px",
+          borderRadius: 999,
+          justifySelf: "end",
+          background:
+            status === "healthy"
+              ? "rgba(126,217,138,0.1)"
+              : status === "degraded"
+                ? "rgba(251,191,36,0.1)"
+                : "rgba(242,154,154,0.1)",
+          color:
+            status === "healthy"
+              ? "#7ed98a"
+              : status === "degraded"
+                ? "#fbbf24"
+                : "#f29a9a",
+          fontWeight: 500,
+        }}
+      >
+        ● {status}
+      </span>
     </div>
   );
 }
+

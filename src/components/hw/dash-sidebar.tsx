@@ -1,45 +1,52 @@
 "use client";
 
+// Sidebar — matches .design/hookwise-f.jsx (`DASH_NAV`) layout:
+//   pitch-black bg (#0c0c0c, darker than canvas), unicode glyphs as icons,
+//   left-border + accent-color active state, optional count badges.
+// Production preserves all routable surfaces (Analytics, Scanner, Billing, etc.)
+// even where the design dropped them.
+
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { clsx } from "clsx";
-import { Logo } from "./logo";
-import { Icon, type IconName } from "./icon";
 
 type NavItem = {
   href: string;
   name: string;
-  icon: IconName;
-  count?: number;
-  external?: boolean;
+  glyph: string;     // Unicode glyph (matches .design's minimal, Cursor-style markers)
+  count?: number;    // badge — rendered in accent pill when > 0
 };
 
 type NavGroup = { label: string; items: NavItem[] };
 
 const GROUPS: NavGroup[] = [
   {
-    label: "Operate",
+    label: "Main",
     items: [
-      { href: "/dashboard", name: "Overview", icon: "dashboard" },
-      { href: "/events", name: "Events", icon: "activity" },
-      { href: "/anomalies", name: "Anomalies", icon: "alert" },
-      { href: "/alerts", name: "Alerts", icon: "bell" },
+      { href: "/dashboard",        name: "Overview",       glyph: "▤" },
+      { href: "/anomalies",        name: "Investigations", glyph: "✦" },
+      { href: "/events",           name: "Live feed",      glyph: "⚡" },
+      { href: "/reconciliation",   name: "Reconciler",     glyph: "⟲" },
+      { href: "/health",           name: "Health",         glyph: "♥" },
+      { href: "/activity",         name: "Activity",       glyph: "⚑" },
     ],
   },
   {
-    label: "Deliver",
+    label: "Data",
     items: [
-      { href: "/integrations", name: "Integrations", icon: "plug" },
-      { href: "/replay", name: "Replay", icon: "replay" },
-      { href: "/reconciliation", name: "Reconciliation", icon: "refresh" },
+      { href: "/integrations", name: "Endpoints", glyph: "⟿" },
+      { href: "/analytics",    name: "Analytics", glyph: "☷" },
+      { href: "/scan",         name: "Scanner",   glyph: "⌗" },
+      { href: "/replay",       name: "Retries",   glyph: "⏱" },
     ],
   },
   {
-    label: "Insight",
+    label: "Settings",
     items: [
-      { href: "/analytics", name: "Analytics", icon: "chart" },
-      { href: "/flows", name: "Flows", icon: "zap" },
-      { href: "/scan", name: "Scanner", icon: "search" },
+      { href: "/settings",       name: "Project",  glyph: "⚙" },
+      { href: "/settings/api",   name: "API keys", glyph: "⚿" },
+      { href: "/alerts",         name: "Alerts",   glyph: "✉" },
+      { href: "/billing",        name: "Billing",  glyph: "$" },
+      { href: "/settings/team",  name: "Members",  glyph: "☰" },
     ],
   },
 ];
@@ -64,79 +71,82 @@ export function DashSidebar({
     router.refresh();
   }
 
-  const orgName = org?.name ?? "Acme Commerce";
-  const orgPlan = org?.plan ?? "team · pro";
-  const orgInit = org?.initials ?? orgName.slice(0, 2).toUpperCase();
+  const orgName = org?.name ?? "acme-production";
   const userName = user?.name ?? "Operator";
-  const userRole = user?.role ?? "on-call";
+  const userRole = user?.role ?? "Pro plan";
   const userInit = user?.initials ?? userName.slice(0, 2).toUpperCase();
 
   return (
     <aside
-      className="flex flex-col flex-shrink-0 hw-mono-tabular"
+      className="flex flex-col flex-shrink-0"
       style={{
-        width: 232,
-        background: "var(--hw-bg)",
-        borderRight: "1px solid var(--hw-line)",
+        width: 220,
+        background: "#0c0c0c",
+        borderRight: "1px solid var(--hf-line)",
+        height: "100vh",
+        position: "sticky",
+        top: 0,
       }}
     >
-      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid var(--hw-line)" }}>
-        <Logo />
+      {/* Logo */}
+      <div style={{ padding: "20px 18px 16px" }}>
+        <div className="hf-logo">
+          <svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+            <path d="M12 2 L22 7.5 V16.5 L12 22 L2 16.5 V7.5 Z" fill="#f4f2ee" />
+            <path
+              d="M12 2 L12 22 M2 7.5 L22 16.5 M22 7.5 L2 16.5"
+              stroke="#0a0a0a"
+              strokeWidth="0.8"
+              opacity="0.5"
+            />
+          </svg>
+          <span>HOOKWISE</span>
+        </div>
       </div>
 
-      <div
-        className="flex-1 overflow-hidden"
-        style={{ padding: 8, display: "flex", flexDirection: "column", gap: 4 }}
-      >
+      {/* Project switcher */}
+      <div style={{ padding: "0 12px 14px" }}>
         <div
-          className="flex items-center gap-[10px]"
           style={{
-            padding: "10px 12px",
-            border: "1px solid var(--hw-line)",
+            background: "var(--hf-bg-3)",
+            border: "1px solid var(--hf-line)",
             borderRadius: 8,
-            margin: "4px 4px 10px",
-            background: "var(--hw-panel)",
+            padding: "8px 10px",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontSize: 12,
+            color: "var(--hf-ink-2)",
           }}
         >
-          <div
-            className="grid place-items-center"
+          <span
             style={{
-              width: 20,
-              height: 20,
-              borderRadius: 5,
-              background: "linear-gradient(135deg,#fbbf24,#f87171)",
-              fontSize: 10,
-              fontWeight: 700,
-              color: "#0a0d14",
+              width: 16,
+              height: 16,
+              borderRadius: 4,
+              background:
+                "linear-gradient(135deg, var(--hf-accent), #4a7c1f)",
+            }}
+          />
+          <span
+            style={{
+              flex: 1,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
-            {orgInit}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--hw-ink)" }}>{orgName}</div>
-            <div
-              className="hw-mono"
-              style={{ fontSize: 10, color: "var(--hw-ink-4)" }}
-            >
-              {orgPlan}
-            </div>
-          </div>
-          <Icon name="chevron-down" size={14} color="var(--hw-ink-4)" />
+            {orgName}
+          </span>
+          <span style={{ color: "var(--hf-ink-4)" }}>⌄</span>
         </div>
+      </div>
 
+      {/* Nav groups */}
+      <div className="flex-1" style={{ overflow: "auto" }}>
         {GROUPS.map((g) => (
-          <div key={g.label} style={{ padding: "6px 4px" }}>
-            <div
-              className="hw-mono"
-              style={{
-                padding: "6px 12px",
-                fontSize: 10,
-                fontWeight: 500,
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                color: "var(--hw-ink-4)",
-              }}
-            >
+          <div key={g.label} style={{ padding: "8px 0" }}>
+            <div className="hf-sb-head" style={{ padding: "6px 18px 4px" }}>
               {g.label}
             </div>
             {g.items.map((item) => {
@@ -148,51 +158,49 @@ export function DashSidebar({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={clsx(
-                    "flex items-center gap-[10px] transition-all",
-                    "cursor-pointer"
-                  )}
                   style={{
-                    padding: "7px 12px",
-                    borderRadius: 7,
+                    display: "grid",
+                    gridTemplateColumns: "20px 1fr auto",
+                    gap: 10,
+                    alignItems: "center",
+                    padding: "7px 18px",
                     fontSize: 13,
-                    fontWeight: 500,
-                    color: isActive ? "var(--hw-ink)" : "var(--hw-ink-3)",
-                    background: isActive ? "var(--hw-panel-raised)" : "transparent",
-                    boxShadow: isActive ? "inset 0 0 0 1px var(--hw-line-2)" : "none",
+                    color: isActive ? "var(--hf-ink)" : "var(--hf-ink-2)",
+                    background: isActive ? "var(--hf-bg-3)" : "transparent",
+                    borderLeft: isActive
+                      ? "2px solid var(--hf-accent)"
+                      : "2px solid transparent",
+                    paddingLeft: isActive ? 16 : 18,
+                    textDecoration: "none",
                   }}
                 >
-                  <Icon
-                    name={item.icon}
-                    size={15}
-                    color={isActive ? "var(--hw-indigo-ink)" : "var(--hw-ink-4)"}
-                  />
+                  <span
+                    style={{
+                      fontSize: 14,
+                      color: isActive ? "var(--hf-accent)" : "var(--hf-ink-3)",
+                      width: 18,
+                      textAlign: "center",
+                      lineHeight: 1,
+                      fontFamily: "var(--font-jetbrains-mono), monospace",
+                    }}
+                  >
+                    {item.glyph}
+                  </span>
                   <span>{item.name}</span>
                   {count ? (
                     <span
-                      className="hw-mono ml-auto"
                       style={{
                         fontSize: 10,
-                        fontWeight: 600,
-                        padding: "1px 6px",
+                        padding: "1px 7px",
                         borderRadius: 999,
-                        background: "rgba(251,191,36,0.10)",
-                        color: "var(--hw-amber)",
-                        border: "1px solid rgba(251,191,36,0.25)",
+                        background: "var(--hf-accent)",
+                        color: "#0a0a0a",
+                        fontWeight: 600,
+                        fontFamily: "var(--font-jetbrains-mono), monospace",
                       }}
                     >
                       {count}
                     </span>
-                  ) : isActive ? (
-                    <span
-                      className="ml-auto"
-                      style={{
-                        width: 4,
-                        height: 4,
-                        borderRadius: 999,
-                        background: "var(--hw-indigo)",
-                      }}
-                    />
                   ) : null}
                 </Link>
               );
@@ -201,41 +209,51 @@ export function DashSidebar({
         ))}
       </div>
 
+      {/* User footer */}
       <div
-        className="flex items-center gap-[10px]"
         style={{
-          padding: "12px 16px",
-          borderTop: "1px solid var(--hw-line)",
+          padding: "14px 18px",
+          borderTop: "1px solid var(--hf-line)",
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
         }}
       >
-        <div
-          className="grid place-items-center"
+        <span
           style={{
             width: 26,
             height: 26,
-            borderRadius: 6,
-            background: "linear-gradient(135deg,#60a5fa,#818cf8)",
+            borderRadius: 999,
+            background: "linear-gradient(135deg, #a3e635, #4a7c1f)",
+            display: "grid",
+            placeItems: "center",
             fontSize: 11,
-            fontWeight: 700,
-            color: "#0a0d14",
+            fontWeight: 600,
+            color: "#0a0a0a",
           }}
         >
           {userInit}
-        </div>
+        </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 12, fontWeight: 500 }}>{userName}</div>
-          <div className="hw-mono" style={{ fontSize: 10, color: "var(--hw-ink-4)" }}>
-            {userRole}
+          <div style={{ color: "var(--hf-ink)", fontSize: 12, fontWeight: 500 }}>
+            {userName}
           </div>
+          <div style={{ color: "var(--hf-ink-3)", fontSize: 11 }}>{userRole}</div>
         </div>
         <button
           type="button"
           onClick={handleSignOut}
           aria-label="Sign out"
-          className="grid place-items-center hover:text-[var(--hw-ink)]"
-          style={{ color: "var(--hw-ink-4)", padding: 4 }}
+          style={{
+            background: "transparent",
+            border: "none",
+            color: "var(--hf-ink-3)",
+            cursor: "pointer",
+            padding: 4,
+            fontSize: 14,
+          }}
         >
-          <Icon name="settings" size={14} color="currentColor" />
+          ⋯
         </button>
       </div>
     </aside>

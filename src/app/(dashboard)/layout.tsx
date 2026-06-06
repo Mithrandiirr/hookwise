@@ -28,11 +28,11 @@ export default async function DashboardLayout({
     .join("") || "OP";
 
   return (
-    <div className="hw-root flex min-h-screen" style={{ background: "var(--hw-bg)" }}>
-      <DashSidebar user={{ name, role: "on-call", initials }} />
+    <div className="hf-root flex min-h-screen" style={{ background: "var(--hf-bg)" }}>
+      <DashSidebar user={{ name, role: "Pro plan", initials }} />
       <main
         className="flex-1 min-w-0 flex flex-col"
-        style={{ background: "var(--hw-bg)" }}
+        style={{ background: "var(--hf-bg)" }}
       >
         {children}
       </main>
