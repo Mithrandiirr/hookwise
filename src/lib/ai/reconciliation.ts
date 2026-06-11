@@ -4,10 +4,12 @@ import {
   events,
   reconciliationRuns,
 } from "@/lib/db/schema";
-import { eq, and, gte } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { inngest } from "@/lib/inngest/client";
 import { fetchStripeEvents } from "@/lib/providers/stripe-api";
 import { fetchShopifyOrders } from "@/lib/providers/shopify-api";
+import { extractAmountCents } from "@/lib/scanner/extract-amount";
+import { maturityCutoff, maturityWindowMs } from "@/lib/audit/maturity";
 import type { Provider } from "@/types";
 
 export interface ReconciliationResult {
@@ -16,6 +18,17 @@ export interface ReconciliationResult {
   gapsDetected: number;
   gapsResolved: number;
 }
+
+// How far past the maturity window each poll looks. Three windows of overlap means a
+// single failed poll never opens a blind spot, at negligible API cost.
+const LOOKBACK_PAST_MATURITY_MS = 45 * 60 * 1000;
+
+const EMPTY_RESULT: ReconciliationResult = {
+  providerEventsFound: 0,
+  hookwiseEventsFound: 0,
+  gapsDetected: 0,
+  gapsResolved: 0,
+};
 
 export async function reconcileIntegration(
   integrationId: string
@@ -27,99 +40,114 @@ export async function reconcileIntegration(
     .limit(1);
 
   if (!integration || !integration.apiKeyEncrypted) {
-    return {
-      providerEventsFound: 0,
-      hookwiseEventsFound: 0,
-      gapsDetected: 0,
-      gapsResolved: 0,
-    };
+    return EMPTY_RESULT;
   }
 
   // For now, use the encrypted key directly — in production this would be decrypted via Supabase Vault
   const apiKey = integration.apiKeyEncrypted;
+  const provider = integration.provider as Provider;
   const providerDomain = integration.providerDomain;
-  const since = new Date(Date.now() - 10 * 60 * 1000); // last 10 minutes
-  const until = new Date();
+  const now = new Date();
 
-  let providerEventIds: Map<string, { type: string; payload: Record<string, unknown> }>;
+  // Providers deliver late, not just never (Shopify documents 20+ min delays).
+  // Only events older than the maturity window are eligible to be called gaps.
+  const cutoff = maturityCutoff(provider, now);
+  const since = new Date(cutoff.getTime() - LOOKBACK_PAST_MATURITY_MS);
+
+  let providerEvents: Map<
+    string,
+    { type: string; payload: Record<string, unknown>; occurredAt: Date }
+  >;
 
   try {
-    providerEventIds = await fetchProviderEvents(
-      integration.provider as Provider,
+    providerEvents = await fetchProviderEvents(
+      provider,
       apiKey,
       providerDomain,
       since,
-      until
+      cutoff
     );
   } catch (error) {
     console.error(
       `[HookWise Reconciliation] Failed to fetch provider events for ${integrationId}:`,
       error
     );
-    return {
-      providerEventsFound: 0,
-      hookwiseEventsFound: 0,
-      gapsDetected: 0,
-      gapsResolved: 0,
-    };
+    return EMPTY_RESULT;
   }
 
-  // Fetch HookWise events in the same window
+  // Drop anything younger than the maturity window — never flag immature events.
+  for (const [id, data] of providerEvents) {
+    if (data.occurredAt.getTime() > cutoff.getTime()) {
+      providerEvents.delete(id);
+    }
+  }
+
+  if (providerEvents.size === 0) {
+    return EMPTY_RESULT;
+  }
+
+  // Diff against the delivery log by provider_event_id — exact match, no time-window
+  // race: a webhook that arrived at any point counts.
+  const providerIds = [...providerEvents.keys()];
   const hookwiseEvents = await db
-    .select({
-      id: events.id,
-      providerEventId: events.providerEventId,
-    })
+    .select({ providerEventId: events.providerEventId })
     .from(events)
     .where(
       and(
         eq(events.integrationId, integrationId),
-        gte(events.receivedAt, since)
+        inArray(events.providerEventId, providerIds)
       )
     );
 
-  const hookwiseEventIdSet = new Set(
+  const seenIds = new Set(
     hookwiseEvents
       .map((e) => e.providerEventId)
       .filter((id): id is string => id !== null)
   );
 
-  // Find gaps: provider events not in HookWise
-  const gaps: Array<{
-    providerEventId: string;
-    eventType: string;
-    payload: Record<string, unknown>;
-  }> = [];
+  const gaps = providerIds.filter((id) => !seenIds.has(id));
 
-  for (const [providerEventId, data] of providerEventIds) {
-    if (!hookwiseEventIdSet.has(providerEventId)) {
-      gaps.push({
-        providerEventId,
-        eventType: data.type,
-        payload: data.payload,
-      });
-    }
-  }
-
+  // Audit mode records the gap but never touches the customer endpoint.
+  const auditMode = integration.mode === "audit";
   let gapsResolved = 0;
+  let gapsDetected = 0;
 
-  // Insert missing events and trigger delivery
-  for (const gap of gaps) {
+  for (const providerEventId of gaps) {
+    const gap = providerEvents.get(providerEventId)!;
+
+    // Double-check immediately before claiming: the webhook may have landed between
+    // the diff and now. False positives in a Gap Report are fatal to credibility.
+    const [existing] = await db
+      .select({ id: events.id })
+      .from(events)
+      .where(
+        and(
+          eq(events.integrationId, integrationId),
+          eq(events.providerEventId, providerEventId)
+        )
+      )
+      .limit(1);
+    if (existing) continue;
+
+    gapsDetected++;
+
     const [inserted] = await db
       .insert(events)
       .values({
         integrationId,
-        eventType: gap.eventType,
+        eventType: gap.type,
         payload: gap.payload,
         headers: {},
         receivedAt: new Date(),
         signatureValid: true,
-        providerEventId: gap.providerEventId,
+        providerEventId,
         source: "reconciliation",
+        amountCents:
+          extractAmountCents(provider, gap.type, gap.payload) || null,
       })
       .returning({ id: events.id });
 
-    if (inserted) {
+    if (inserted && !auditMode) {
       await inngest.send({
         name: "webhook/received",
         data: {
@@ -133,9 +161,9 @@ export async function reconcileIntegration(
   }
 
   const result: ReconciliationResult = {
-    providerEventsFound: providerEventIds.size,
-    hookwiseEventsFound: hookwiseEvents.length,
-    gapsDetected: gaps.length,
+    providerEventsFound: providerEvents.size,
+    hookwiseEventsFound: seenIds.size,
+    gapsDetected,
     gapsResolved,
   };
 
@@ -146,7 +174,7 @@ export async function reconcileIntegration(
     hookwiseEventsFound: result.hookwiseEventsFound,
     gapsDetected: result.gapsDetected,
     gapsResolved: result.gapsResolved,
-    ranAt: new Date(),
+    ranAt: now,
   });
 
   return result;
@@ -158,8 +186,11 @@ async function fetchProviderEvents(
   providerDomain: string | null,
   since: Date,
   until: Date
-): Promise<Map<string, { type: string; payload: Record<string, unknown> }>> {
-  const map = new Map<string, { type: string; payload: Record<string, unknown> }>();
+): Promise<Map<string, { type: string; payload: Record<string, unknown>; occurredAt: Date }>> {
+  const map = new Map<
+    string,
+    { type: string; payload: Record<string, unknown>; occurredAt: Date }
+  >();
 
   if (provider === "stripe") {
     const stripeEvents = await fetchStripeEvents(apiKey, since, until);
@@ -167,6 +198,7 @@ async function fetchProviderEvents(
       map.set(evt.id, {
         type: evt.type,
         payload: { id: evt.id, type: evt.type, created: evt.created, data: evt.data },
+        occurredAt: new Date(evt.created * 1000),
       });
     }
   } else if (provider === "shopify") {
@@ -180,6 +212,7 @@ async function fetchProviderEvents(
       map.set(eventId, {
         type: "orders/create",
         payload: order as unknown as Record<string, unknown>,
+        occurredAt: new Date(order.created_at),
       });
     }
   }
@@ -188,3 +221,4 @@ async function fetchProviderEvents(
   return map;
 }
 
+export { maturityWindowMs };

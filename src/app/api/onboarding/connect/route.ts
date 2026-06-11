@@ -7,14 +7,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db, integrations, endpoints } from "@/lib/db";
+import { waitlist } from "@/lib/db/schema";
 import { z } from "zod";
 import { inngest } from "@/lib/inngest/client";
+import { createAudit } from "@/lib/audit";
 
 const schema = z.object({
   provider: z.enum(["shopify", "stripe"]),
   apiKey: z.string().min(8),
   shopDomain: z.string().optional(),
   label: z.string().min(1).max(80).optional(),
+  // Demand capture: "Which other provider do you want this for?"
+  desiredProvider: z.string().trim().min(1).max(80).optional(),
 });
 
 // Sentinels — the customer hasn't pointed webhooks at HookWise yet, but the row needs
@@ -34,7 +38,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Bad request" }, { status: 400 });
   }
-  const { provider, apiKey, shopDomain, label } = parsed.data;
+  const { provider, apiKey, shopDomain, label, desiredProvider } = parsed.data;
 
   if (provider === "shopify" && !shopDomain) {
     return NextResponse.json({ error: "shopDomain required for shopify" }, { status: 400 });
@@ -69,6 +73,9 @@ export async function POST(request: NextRequest) {
         destinationUrl: PENDING_DESTINATION_URL,
         destinationType: "http",
         status: "active",
+        // v8: new connections start as a record-only 7-day audit. Delivery to the
+        // customer endpoint begins only when they upgrade to monitoring.
+        mode: "audit",
         apiKeyEncrypted: apiKey,
         providerDomain: shopDomain ?? null,
       })
@@ -87,6 +94,21 @@ export async function POST(request: NextRequest) {
 
     return integration;
   });
+
+  // Start the 7-day Gap Audit window immediately.
+  await createAudit({ integrationId: result.id, desiredProvider });
+
+  // Mirror demand capture to the waitlist so provider requests live in one place.
+  if (desiredProvider && user.email) {
+    await db
+      .insert(waitlist)
+      .values({ email: user.email, desiredProvider })
+      .onConflictDoUpdate({
+        target: waitlist.email,
+        set: { desiredProvider },
+      })
+      .catch(() => {});
+  }
 
   // Fire-and-forget audit log
   import("@/lib/compliance/audit").then(({ logAuditEvent }) =>

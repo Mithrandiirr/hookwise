@@ -56,6 +56,7 @@ export default function OnboardingConnectPage() {
   const [provider, setProvider] = useState<ProviderKey>("shopify");
   const [apiKey, setApiKey] = useState("");
   const [shopDomain, setShopDomain] = useState("");
+  const [desiredProvider, setDesiredProvider] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [label, setLabel] = useState<string | null>(null);
@@ -109,6 +110,7 @@ export default function OnboardingConnectPage() {
         apiKey: apiKey.trim(),
         shopDomain: spec.needsDomain ? shopDomain.trim() : undefined,
         label,
+        desiredProvider: desiredProvider.trim() || undefined,
       }),
     });
 
@@ -119,8 +121,8 @@ export default function OnboardingConnectPage() {
       return;
     }
 
-    const body = (await res.json()) as { integrationId: string };
-    router.push(`/dashboard/loading?integrationId=${body.integrationId}`);
+    await res.json();
+    router.push("/audit");
   }
 
   return (
@@ -128,11 +130,12 @@ export default function OnboardingConnectPage() {
       <div style={{ width: "100%", maxWidth: 620 }}>
         <div className="hf-eyebrow">Step 1 of 1</div>
         <h1 className="hf-display" style={{ fontSize: 36, margin: "12px 0 8px", lineHeight: 1.08 }}>
-          Connect your first provider.
+          Start your 7-day gap audit.
         </h1>
         <p style={{ fontSize: 14, color: "var(--hf-ink-3)", lineHeight: 1.55, margin: 0, maxWidth: 520 }}>
-          HookWise reads from the provider&apos;s API to back-poll the last 30 days. You&apos;ll be on
-          the dashboard with real numbers in about a minute.
+          A read-only API key is all we need. For 7 days we record what the provider fires, poll its
+          API for ground truth, and build your Gap Report — we also back-poll the last 30 days so you
+          see real numbers in about a minute. Never in your critical path.
         </p>
 
         {/* Provider picker */}
@@ -273,9 +276,29 @@ export default function OnboardingConnectPage() {
           </div>
         </section>
 
+        {/* Demand capture — one optional field; collecting is Phase 0 scope, acting on it is not. */}
+        <section style={{ marginTop: 28 }}>
+          <Heading n="3" label="One optional question" />
+          <div style={{ marginTop: 12 }}>
+            <label className="hf-mono" style={labelStyle}>
+              Which other provider do you want this for?
+            </label>
+            <input
+              type="text"
+              autoComplete="off"
+              spellCheck={false}
+              value={desiredProvider}
+              onChange={(e) => setDesiredProvider(e.target.value)}
+              placeholder="Stripe, Paddle, Clerk, Twilio… (optional)"
+              maxLength={80}
+              style={{ ...inputStyle, marginTop: 6 }}
+            />
+          </div>
+        </section>
+
         {/* Validate / Connect */}
         <section style={{ marginTop: 28 }}>
-          <Heading n="3" label="Validate and connect" />
+          <Heading n="4" label="Validate and start" />
           <div style={{ marginTop: 14 }}>
             {status === "validated" && (
               <div
@@ -293,7 +316,7 @@ export default function OnboardingConnectPage() {
               >
                 <span style={{ color: "#7ed98a", fontSize: 14 }}>✓</span>
                 <span>
-                  Validated{label ? ` · ${label}` : ""}. Ready to start the 30-day back-poll.
+                  Validated{label ? ` · ${label}` : ""}. Ready to start the 7-day audit.
                 </span>
               </div>
             )}
@@ -326,7 +349,7 @@ export default function OnboardingConnectPage() {
                 className="hf-btn pill"
                 style={{ opacity: status === "connecting" ? 0.6 : 1 }}
               >
-                {status === "connecting" ? "Starting back-poll…" : "Start back-poll →"}
+                {status === "connecting" ? "Starting audit…" : "Start the 7-day audit →"}
               </button>
             ) : (
               <button

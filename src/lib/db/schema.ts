@@ -12,6 +12,10 @@ import {
 
 export const providerEnum = pgEnum("provider", ["stripe", "shopify", "github"]);
 export const integrationStatusEnum = pgEnum("integration_status", ["active", "paused", "error"]);
+// v8: audit = record-only (we observe + reconcile but never deliver to the customer endpoint);
+// monitor = paid continuous reconciliation with gap delivery.
+export const integrationModeEnum = pgEnum("integration_mode", ["audit", "monitor"]);
+export const auditStatusEnum = pgEnum("audit_status", ["running", "complete"]);
 export const deliveryStatusEnum = pgEnum("delivery_status", ["pending", "delivered", "failed", "dead_letter"]);
 export const circuitStateEnum = pgEnum("circuit_state", ["closed", "half_open", "open"]);
 export const errorTypeEnum = pgEnum("error_type", ["timeout", "server_error", "rate_limit", "ssl", "connection_refused", "unknown"]);
@@ -69,6 +73,7 @@ export const integrations = pgTable("integrations", {
   signingSecret: text("signing_secret").notNull(),
   destinationUrl: text("destination_url").notNull(),
   status: integrationStatusEnum("status").notNull().default("active"),
+  mode: integrationModeEnum("mode").notNull().default("monitor"),
   apiKeyEncrypted: text("api_key_encrypted"),
   destinationType: text("destination_type").notNull().default("http"),
   idempotencyEnabled: boolean("idempotency_enabled").notNull().default(false),
@@ -379,7 +384,30 @@ export const benchmarks = pgTable("benchmarks", {
 export const waitlist = pgTable("waitlist", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
+  // Demand capture: "Which other provider do you want this for?" — collecting is Phase 0
+  // scope, acting on it is not.
+  desiredProvider: text("desired_provider"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+// v8: the 7-Day Gap Audit — lead magnet, proof artifact, and validation instrument.
+export const audits = pgTable("audits", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  integrationId: uuid("integration_id")
+    .notNull()
+    .references(() => integrations.id),
+  status: auditStatusEnum("status").notNull().default("running"),
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  endsAt: timestamp("ends_at").notNull(),
+  // Public share link for the Gap Report (agencies forward it to merchants).
+  shareToken: text("share_token").notNull().unique(),
+  // White-label: agencies render the report under their own brand.
+  brandName: text("brand_name"),
+  // Demand capture, also mirrored to waitlist when an email is present.
+  desiredProvider: text("desired_provider"),
+  // Cached Gap Report payload (regenerated on demand while running, frozen on completion).
+  report: jsonb("report"),
+  reportGeneratedAt: timestamp("report_generated_at"),
 });
 
 export type SecurityScan = typeof securityScans.$inferSelect;
@@ -389,3 +417,5 @@ export type ComplianceExport = typeof complianceExports.$inferSelect;
 export type ProviderHealth = typeof providerHealth.$inferSelect;
 export type Benchmark = typeof benchmarks.$inferSelect;
 export type WaitlistEntry = typeof waitlist.$inferSelect;
+export type Audit = typeof audits.$inferSelect;
+export type NewAudit = typeof audits.$inferInsert;

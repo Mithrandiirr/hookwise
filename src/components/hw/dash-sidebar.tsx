@@ -18,24 +18,23 @@ type NavItem = {
 
 type NavGroup = { label: string; items: NavItem[] };
 
+// v8: reconciliation IS the product. Audit + Reconciler lead; dormant surfaces
+// (analytics, scanner, billing, anomalies, health, activity) stay routable but
+// leave the nav until a paying customer pulls them back in.
 const GROUPS: NavGroup[] = [
   {
     label: "Main",
     items: [
-      { href: "/dashboard",        name: "Overview",       glyph: "▤" },
-      { href: "/anomalies",        name: "Investigations", glyph: "✦" },
-      { href: "/events",           name: "Live feed",      glyph: "⚡" },
+      { href: "/audit",            name: "Gap Audit",      glyph: "⌖" },
       { href: "/reconciliation",   name: "Reconciler",     glyph: "⟲" },
-      { href: "/health",           name: "Health",         glyph: "♥" },
-      { href: "/activity",         name: "Activity",       glyph: "⚑" },
+      { href: "/dashboard",        name: "Overview",       glyph: "▤" },
+      { href: "/events",           name: "Live feed",      glyph: "⚡" },
     ],
   },
   {
     label: "Data",
     items: [
       { href: "/integrations", name: "Endpoints", glyph: "⟿" },
-      { href: "/analytics",    name: "Analytics", glyph: "☷" },
-      { href: "/scan",         name: "Scanner",   glyph: "⌗" },
       { href: "/replay",       name: "Retries",   glyph: "⏱" },
     ],
   },
@@ -45,7 +44,6 @@ const GROUPS: NavGroup[] = [
       { href: "/settings",       name: "Project",  glyph: "⚙" },
       { href: "/settings/api",   name: "API keys", glyph: "⚿" },
       { href: "/alerts",         name: "Alerts",   glyph: "✉" },
-      { href: "/billing",        name: "Billing",  glyph: "$" },
       { href: "/settings/team",  name: "Members",  glyph: "☰" },
     ],
   },
@@ -125,7 +123,7 @@ export function DashSidebar({
               height: 16,
               borderRadius: 4,
               background:
-                "linear-gradient(135deg, var(--hf-accent), #4a7c1f)",
+                "linear-gradient(135deg, var(--hf-accent), #0369a1)",
             }}
           />
           <span
@@ -224,7 +222,7 @@ export function DashSidebar({
             width: 26,
             height: 26,
             borderRadius: 999,
-            background: "linear-gradient(135deg, #a3e635, #4a7c1f)",
+            background: "linear-gradient(135deg, #38bdf8, #0369a1)",
             display: "grid",
             placeItems: "center",
             fontSize: 11,

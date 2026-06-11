@@ -496,7 +496,7 @@ body {
   --hf-line: rgba(0, 0, 0, 0.08);
   --hf-line-2: rgba(0, 0, 0, 0.14);
 
-  --hf-accent: #4a7c1f;        /* deeper signal-green · readable on cream */
+  --hf-accent: #0369a1;        /* v8: deep sky blue · readable on cream */
   --hf-accent-warm: #c94a1a;   /* deeper warm · readable on white */
   --hf-warm: #c97933;
   --hf-blue: #4a8fdc;
@@ -513,12 +513,12 @@ body {
   --hf-code-bg: #f0ede7;
   --hf-stat-inner: rgba(0, 0, 0, 0.04);
 
-  /* Landscape mesh — pale signal-green blooms on cream */
+  /* Landscape mesh — pale sky-blue blooms on cream */
   --hf-landscape:
-    radial-gradient(ellipse 90% 70% at 12% -10%, rgba(163, 230, 53, 0.16), transparent 55%),
-    radial-gradient(ellipse 80% 80% at 100% 110%, rgba(120, 180, 40, 0.10), transparent 60%),
-    radial-gradient(ellipse 60% 60% at 50% 50%, rgba(196, 230, 130, 0.06), transparent 70%),
-    linear-gradient(180deg, #f4f7ec 0%, #ebf3dc 100%);
+    radial-gradient(ellipse 90% 70% at 12% -10%, rgba(56, 189, 248, 0.16), transparent 55%),
+    radial-gradient(ellipse 80% 80% at 100% 110%, rgba(2, 132, 199, 0.10), transparent 60%),
+    radial-gradient(ellipse 60% 60% at 50% 50%, rgba(125, 211, 252, 0.06), transparent 70%),
+    linear-gradient(180deg, #ecf5fb 0%, #e0eef9 100%);
   --hf-landscape-blue:
     radial-gradient(ellipse 90% 70% at 12% -10%, rgba(139, 109, 222, 0.18), transparent 55%),
     radial-gradient(ellipse 80% 80% at 100% 110%, rgba(120, 180, 40, 0.10), transparent 60%),
@@ -542,8 +542,8 @@ body {
   --hf-line: rgba(255, 255, 255, 0.08);
   --hf-line-2: rgba(255, 255, 255, 0.14);
 
-  --hf-accent: #a3e635;       /* signal — electric chartreuse */
-  --hf-accent-warm: #ff6b2c;  /* ember — kept for revenue tiles (conditional) */
+  --hf-accent: #38bdf8;       /* v8: signal — sky blue */
+  --hf-accent-warm: #ff6b2c;  /* ember — reserved for dollar amounts in Gap Reports / gap tiles */
   --hf-warm: #f2b37a;
   --hf-blue: #9ac7ff;
   --hf-violet: #c4a5ff;
@@ -558,17 +558,17 @@ body {
   --hf-code-bg: #0d0d0d;
   --hf-stat-inner: rgba(255, 255, 255, 0.02);
 
-  /* Signal-green landscape mesh (replaces sky-blue radials). */
+  /* v8: sky-blue landscape mesh. */
   --hf-landscape:
-    radial-gradient(95% 80% at 0% 100%, #1f2e0a 0%, transparent 55%),
-    radial-gradient(80% 70% at 100% 0%, #28400e 0%, transparent 55%),
-    radial-gradient(60% 80% at 50% 110%, #345012 0%, transparent 62%),
-    linear-gradient(180deg, #10140b 0%, #0a0d08 100%);
+    radial-gradient(95% 80% at 0% 100%, #0a1e2e 0%, transparent 55%),
+    radial-gradient(80% 70% at 100% 0%, #0e2840 0%, transparent 55%),
+    radial-gradient(60% 80% at 50% 110%, #123450 0%, transparent 62%),
+    linear-gradient(180deg, #0b1014 0%, #080a0d 100%);
   --hf-landscape-blue:
-    radial-gradient(70% 60% at 50% 100%, #243a0d 0%, transparent 60%),
-    radial-gradient(90% 70% at 0% 0%, #1a280a 0%, transparent 62%),
-    radial-gradient(60% 60% at 100% 100%, #355815 0%, transparent 60%),
-    linear-gradient(180deg, #11150c 0%, #080a06 100%);
+    radial-gradient(70% 60% at 50% 100%, #0d243a 0%, transparent 60%),
+    radial-gradient(90% 70% at 0% 0%, #0a1a28 0%, transparent 62%),
+    radial-gradient(60% 60% at 100% 100%, #153558 0%, transparent 60%),
+    linear-gradient(180deg, #0c1115 0%, #06080a 100%);
 }
 
 .hf-root {
