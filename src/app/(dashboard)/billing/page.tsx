@@ -83,7 +83,7 @@ export default async function BillingPage() {
                   width: 6,
                   height: 6,
                   borderRadius: 999,
-                  background: overage > 0 ? "#fbbf24" : "#7ed98a",
+                  background: overage > 0 ? "#d97706" : "#16a34a",
                 }}
               />
               {plan.name} · {used.toLocaleString()} events
@@ -120,7 +120,7 @@ export default async function BillingPage() {
               marginTop: 22,
               height: 10,
               borderRadius: 5,
-              background: "rgba(255,255,255,0.05)",
+              background: "#f1f2f5",
               overflow: "hidden",
             }}
           >
@@ -129,7 +129,7 @@ export default async function BillingPage() {
                 height: "100%",
                 width: `${pct}%`,
                 background:
-                  pct >= 90 ? "var(--hf-accent-warm)" : pct >= 75 ? "#fbbf24" : "var(--hf-accent)",
+                  pct >= 90 ? "var(--hf-accent-warm)" : pct >= 75 ? "#d97706" : "var(--hf-accent)",
                 transition: "width 200ms ease",
               }}
             />
@@ -185,7 +185,7 @@ export default async function BillingPage() {
                 <div
                   key={p.key}
                   style={{
-                    background: isCurrent ? "rgba(154,199,255,0.06)" : "var(--hf-bg)",
+                    background: isCurrent ? "#e8f4fb" : "var(--hf-bg)",
                     border: isCurrent ? "1px solid var(--hf-accent)" : "1px solid var(--hf-line)",
                     borderRadius: 12,
                     padding: "18px 20px",

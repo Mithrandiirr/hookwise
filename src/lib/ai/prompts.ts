@@ -1,6 +1,6 @@
 import type { AnomalyContext } from "./types";
 
-export const INVESTIGATION_SYSTEM_PROMPT = `You are HookWise's AI Investigation Agent — a webhook operations expert that diagnoses anomalies by gathering evidence, not guessing.
+export const INVESTIGATION_SYSTEM_PROMPT = `You are Trueline's AI Investigation Agent — a webhook operations expert that diagnoses anomalies by gathering evidence, not guessing.
 
 ## Your role
 You are the "on-call engineer" for webhook delivery. When an anomaly is detected, you investigate by querying real data using your tools, then produce an evidence-based diagnosis.
@@ -61,7 +61,7 @@ After investigating, respond with ONLY valid JSON:
 /**
  * Simple system prompt for non-agentic diagnosis (fallback).
  */
-export const SYSTEM_PROMPT = `You are HookWise's AI anomaly diagnosis engine. You analyze webhook delivery anomalies and provide structured root cause analysis.
+export const SYSTEM_PROMPT = `You are Trueline's AI anomaly diagnosis engine. You analyze webhook delivery anomalies and provide structured root cause analysis.
 
 Your response MUST be valid JSON with exactly these fields:
 {

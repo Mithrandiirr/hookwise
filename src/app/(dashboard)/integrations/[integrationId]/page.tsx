@@ -247,8 +247,8 @@ export default async function IntegrationDetailPage({
                 style={{
                   marginTop: 14,
                   padding: "14px 18px",
-                  background: "rgba(248,113,113,0.04)",
-                  borderColor: "rgba(248,113,113,0.22)",
+                  background: "#fdeaea",
+                  borderColor: "#f4c4c4",
                   gap: 12,
                 }}
               >

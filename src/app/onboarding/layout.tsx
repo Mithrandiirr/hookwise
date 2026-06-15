@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Logo } from "@/components/hw/logo";
 import "@/app/globals.css";
 
 export default function OnboardingLayout({ children }: { children: React.ReactNode }) {
@@ -7,24 +8,14 @@ export default function OnboardingLayout({ children }: { children: React.ReactNo
       <header
         style={{
           padding: "18px 28px",
-          borderBottom: "1px solid var(--hf-line)",
+          borderBottom: "1px solid var(--hf-line-soft)",
+          background: "#ffffff",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
         }}
       >
-        <Link href="/" className="hf-logo" style={{ textDecoration: "none" }}>
-          <svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <path d="M12 2 L22 7.5 V16.5 L12 22 L2 16.5 V7.5 Z" fill="#f4f2ee" />
-            <path
-              d="M12 2 L12 22 M2 7.5 L22 16.5 M22 7.5 L2 16.5"
-              stroke="#0a0a0a"
-              strokeWidth="0.8"
-              opacity="0.5"
-            />
-          </svg>
-          <span>HOOKWISE</span>
-        </Link>
+        <Logo />
         <Link
           href="/dashboard"
           style={{ color: "var(--hf-ink-3)", fontSize: 12.5, textDecoration: "none" }}

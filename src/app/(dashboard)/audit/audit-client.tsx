@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -24,7 +24,7 @@ export function AuditClient(props: Props) {
     return (
       <div style={{ marginTop: 8 }}>
         {error && (
-          <p style={{ fontSize: 12.5, color: "#f29a9a", marginBottom: 10 }}>{error}</p>
+          <p style={{ fontSize: 12.5, color: "#dc2626", marginBottom: 10 }}>{error}</p>
         )}
         <button
           type="button"
@@ -123,7 +123,7 @@ export function AuditClient(props: Props) {
         <button type="button" className="hf-btn outline small" disabled={busy} onClick={saveBrand}>
           {busy ? "Saving…" : "Save"}
         </button>
-        {error && <span style={{ fontSize: 12, color: "#f29a9a" }}>{error}</span>}
+        {error && <span style={{ fontSize: 12, color: "#dc2626" }}>{error}</span>}
       </div>
     </div>
   );

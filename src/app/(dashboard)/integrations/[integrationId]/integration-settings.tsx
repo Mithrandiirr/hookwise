@@ -209,12 +209,12 @@ export function IntegrationSettings({ integration }: IntegrationSettingsProps) {
             borderRadius: 8,
             background:
               message.type === "success"
-                ? "rgba(74,222,128,0.06)"
-                : "rgba(248,113,113,0.06)",
+                ? "#e8f7ee"
+                : "#fdeaea",
             border:
               message.type === "success"
-                ? "1px solid rgba(74,222,128,0.22)"
-                : "1px solid rgba(248,113,113,0.22)",
+                ? "1px solid #c4ebd2"
+                : "1px solid #f4c4c4",
             color:
               message.type === "success"
                 ? "var(--hw-green)"
@@ -231,7 +231,7 @@ export function IntegrationSettings({ integration }: IntegrationSettingsProps) {
           type="button"
           onClick={() => setShowDeleteConfirm(true)}
           className="hw-btn hw-btn-ghost"
-          style={{ color: "var(--hw-red)", borderColor: "rgba(248,113,113,0.22)" }}
+          style={{ color: "var(--hw-red)", borderColor: "#f4c4c4" }}
         >
           <Icon name="x" size={13} /> Delete integration
         </button>

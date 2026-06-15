@@ -96,7 +96,7 @@ export default async function FlowsPage() {
             </div>
             <div style={{ fontSize: 15, color: "var(--hf-ink)" }}>No flows defined</div>
             <div style={{ fontSize: 12.5, color: "var(--hf-ink-4)", maxWidth: 380 }}>
-              Model multi-step chains like Shopify order → Stripe payment → SendGrid email. HookWise tracks the instance until every step fires.
+              Model multi-step chains like Shopify order → Stripe payment → SendGrid email. Trueline tracks the instance until every step fires.
             </div>
             <Link href="/flows/new" className="hf-btn pill">
               <Icon name="zap" size={13} /> Create flow
@@ -158,8 +158,8 @@ export default async function FlowsPage() {
                   {stats && (
                     <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
                       <MiniStat label="running" value={stats.running} color="var(--hf-accent)" />
-                      <MiniStat label="done" value={stats.completed} color="#7ed98a" />
-                      <MiniStat label="failed" value={stats.failed} color="#f29a9a" />
+                      <MiniStat label="done" value={stats.completed} color="#16a34a" />
+                      <MiniStat label="failed" value={stats.failed} color="#dc2626" />
                     </div>
                   )}
                   <Icon name="chevron-right" size={14} color="var(--hf-ink-4)" />

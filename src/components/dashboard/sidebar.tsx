@@ -58,7 +58,7 @@ export function Sidebar() {
           <Zap className="h-4 w-4 text-indigo-400" />
         </div>
         <span className="text-[15px] font-semibold tracking-tight text-[var(--text-primary)]">
-          HookWise
+          Trueline
         </span>
       </div>
 

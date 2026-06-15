@@ -2,16 +2,10 @@ export const dynamic = "force-dynamic";
 
 import { createClient } from "@/lib/supabase/server";
 import { db, integrations, reconciliationRuns, events } from "@/lib/db";
-import { eq, desc, inArray, and, gte, sql } from "drizzle-orm";
-import {
-  DashTopbar,
-  PageHead,
-  StatTile,
-  Panel,
-  Pill,
-  ProviderTag,
-  fmtAgo,
-} from "@/components/hw";
+import { eq, desc, inArray, sql } from "drizzle-orm";
+import { ReconciliationRuns, type Run } from "./reconciliation-runs";
+
+const mono = "var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace";
 
 export default async function ReconciliationPage() {
   const supabase = await createClient();
@@ -20,340 +14,139 @@ export default async function ReconciliationPage() {
   } = await supabase.auth.getUser();
 
   const userIntegrations = await db
-    .select({
-      id: integrations.id,
-      name: integrations.name,
-      provider: integrations.provider,
-    })
+    .select({ id: integrations.id, provider: integrations.provider })
     .from(integrations)
     .where(eq(integrations.userId, user!.id));
-
   const integrationIds = userIntegrations.map((i) => i.id);
-  const integrationMap = new Map(userIntegrations.map((i) => [i.id, i] as const));
 
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
 
-  const [recentRuns, recoveredRevenueRow] = await Promise.all([
+  const [recentRuns, topicRows] = await Promise.all([
     integrationIds.length > 0
       ? db
           .select()
           .from(reconciliationRuns)
-          .where(
-            and(
-              inArray(reconciliationRuns.integrationId, integrationIds),
-              gte(reconciliationRuns.ranAt, thirtyDaysAgo),
-            ),
-          )
+          .where(inArray(reconciliationRuns.integrationId, integrationIds))
           .orderBy(desc(reconciliationRuns.ranAt))
-          .limit(20)
+          .limit(12)
       : Promise.resolve([]),
     integrationIds.length > 0
       ? db
           .select({
-            revenue: sql<number>`COALESCE(SUM(${events.amountCents}), 0)::bigint`,
+            eventType: events.eventType,
+            total: sql<number>`COUNT(*)::int`,
+            recovered: sql<number>`COUNT(*) FILTER (WHERE ${events.source} = 'reconciliation')::int`,
           })
           .from(events)
-          .where(
-            and(
-              inArray(events.integrationId, integrationIds),
-              eq(events.source, "reconciliation"),
-              gte(events.receivedAt, thirtyDaysAgo),
-            ),
-          )
-      : Promise.resolve([{ revenue: 0 }]),
+          .where(inArray(events.integrationId, integrationIds))
+          .groupBy(events.eventType)
+          .orderBy(sql`COUNT(*) DESC`)
+          .limit(6)
+      : Promise.resolve([]),
   ]);
 
-  const totRecov = recentRuns.reduce((s, r) => s + r.gapsResolved, 0);
-  const totScanned = recentRuns.reduce((s, r) => s + r.providerEventsFound, 0);
-  const totRevenueCents = Number(recoveredRevenueRow[0]?.revenue ?? 0);
-  const parityPct =
-    totScanned > 0
-      ? ((totScanned - recentRuns.reduce((s, r) => s + r.gapsDetected, 0)) /
-          totScanned) *
-        100
-      : 100;
+  const truth = recentRuns.reduce((s, r) => s + r.providerEventsFound, 0);
+  const delivered = recentRuns.reduce((s, r) => s + r.hookwiseEventsFound, 0);
+  const recovered = recentRuns.reduce((s, r) => s + r.gapsResolved, 0);
+  const runsToday = recentRuns.filter((r) => r.ranAt >= startOfDay).length;
+  const gapsToday = recentRuns.filter((r) => r.ranAt >= startOfDay).reduce((s, r) => s + r.gapsDetected, 0);
+  const lastRun = recentRuns[0]?.ranAt;
+  const inParity = recentRuns.every((r) => r.gapsDetected === r.gapsResolved);
 
-  const perProvider = new Map<
-    string,
-    { latestRun?: Date; parity?: number; gaps: number }
-  >();
-  for (const r of recentRuns) {
-    const integ = integrationMap.get(r.integrationId);
-    if (!integ) continue;
-    const cur = perProvider.get(integ.provider) ?? { gaps: 0 };
-    cur.gaps += r.gapsDetected;
-    if (!cur.latestRun || r.ranAt > cur.latestRun) {
-      cur.latestRun = r.ranAt;
-      cur.parity =
-        r.providerEventsFound > 0
-          ? ((r.providerEventsFound - r.gapsDetected) / r.providerEventsFound) * 100
-          : 100;
-    }
-    perProvider.set(integ.provider, cur);
-  }
+  const runs: Run[] = recentRuns.map((r) => ({
+    id: r.id,
+    ranAt: new Date(r.ranAt).toISOString(),
+    providerEventsFound: r.providerEventsFound,
+    hookwiseEventsFound: r.hookwiseEventsFound,
+    gapsDetected: r.gapsDetected,
+    gapsResolved: r.gapsResolved,
+  }));
 
   return (
-    <>
-      <DashTopbar
-        title="Reconciler"
-        subtitle="Provider parity polling · auto-recovers missed events"
-        right={
-          <Pill tone={totRecov > 0 ? "green" : "ink"}>
-            +{totRecov.toLocaleString()} recovered · 30d
-          </Pill>
-        }
-      />
-
-      <div style={{ padding: "24px 32px 40px", overflow: "auto", flex: 1 }}>
-        <PageHead
-          crumb="Reconciler"
-          title={
-            <>
-              HookWise found{" "}
-              <span className="hf-serif" style={{ color: "var(--hf-accent)" }}>
-                {totRecov.toLocaleString()} event{totRecov === 1 ? "" : "s"}
-              </span>{" "}
-              the provider missed.
-            </>
-          }
-          sub="Every five minutes we poll each provider's API, diff against our ingest log, and quietly recover anything that fell through the cracks."
-          actions={
-            <>
-              <button type="button" className="hf-btn outline small">Schedule</button>
-              <button type="button" className="hf-btn pill small">Run now ↻</button>
-            </>
-          }
-        />
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 10,
-            marginBottom: 22,
-          }}
-        >
-          <StatTile
-            label="EVENTS RECOVERED"
-            value={totRecov.toLocaleString()}
-            sub="last 30 days"
-            color="var(--hf-accent)"
-            accent="var(--hf-accent)"
-          />
-          <StatTile
-            label="REVENUE PROTECTED"
-            value={totRevenueCents > 0 ? fmtMoney(totRevenueCents) : "$0"}
-            sub="quantified per recovery"
-            color="#7ed98a"
-            accent="#7ed98a"
-          />
-          <StatTile
-            label="PROVIDER EVENTS SCANNED"
-            value={fmtCount(totScanned)}
-            sub={`across ${perProvider.size || 0} integration${perProvider.size === 1 ? "" : "s"}`}
-          />
-          <StatTile
-            label="PARITY · 30D"
-            value={`${parityPct.toFixed(2)}%`}
-            sub="ingest log vs provider truth"
-          />
+    <div style={{ padding: "28px 32px 32px", flex: 1, overflow: "auto" }}>
+      {/* header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, letterSpacing: "-0.02em" }}>Reconciliation</h3>
+          <div style={{ fontSize: 12.5, color: "var(--hf-ink-3)", marginTop: 6 }}>Polling the Admin API against delivered webhooks · read-only</div>
         </div>
-
-        {perProvider.size > 0 && (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: `repeat(${Math.min(perProvider.size, 5)}, 1fr)`,
-              gap: 12,
-              marginBottom: 22,
-            }}
-          >
-            {Array.from(perProvider.entries()).map(([p, s]) => (
-              <div
-                key={p}
-                style={{
-                  background: "var(--hf-bg-3)",
-                  border: "1px solid var(--hf-line)",
-                  borderRadius: 12,
-                  padding: "16px 18px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: 10,
-                  }}
-                >
-                  <ProviderTag name={p} />
-                  <span
-                    className="hf-mono"
-                    style={{ fontSize: 10.5, color: "var(--hf-ink-4)" }}
-                  >
-                    {s.latestRun ? `last ${fmtAgo(s.latestRun)} ago` : "—"}
-                  </span>
-                </div>
-                <div
-                  className="hf-num hf-mono"
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 500,
-                    color: "var(--hf-ink)",
-                    letterSpacing: "-0.025em",
-                  }}
-                >
-                  {s.parity != null ? `${s.parity.toFixed(2)}%` : "—"}
-                </div>
-                <div
-                  style={{ fontSize: 11.5, color: "var(--hf-ink-3)", marginTop: 4 }}
-                >
-                  parity · last run
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <Panel
-          title="Reconciliation runs"
-          right={
-            <span style={{ fontSize: 11.5, color: "var(--hf-ink-3)" }}>
-              {recentRuns.length} most recent
-            </span>
-          }
-          padded={false}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "100px 120px 1fr 90px 90px 100px",
-              gap: 14,
-              padding: "12px 24px",
-              fontFamily: "var(--font-jetbrains-mono), monospace",
-              fontSize: 10.5,
-              color: "var(--hf-ink-4)",
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              borderBottom: "1px solid var(--hf-line)",
-            }}
-          >
-            <span>Time</span>
-            <span>Provider</span>
-            <span>Coverage</span>
-            <span style={{ textAlign: "right" }}>Scanned</span>
-            <span style={{ textAlign: "right" }}>Recovered</span>
-            <span style={{ textAlign: "right" }}>Status</span>
-          </div>
-          {recentRuns.length === 0 ? (
-            <div
-              style={{
-                padding: "48px 24px",
-                textAlign: "center",
-                fontSize: 13,
-                color: "var(--hf-ink-4)",
-              }}
-            >
-              No reconciliation runs in the last 30 days.
-            </div>
-          ) : (
-            recentRuns.map((r, i) => {
-              const integ = integrationMap.get(r.integrationId);
-              const coveragePct =
-                r.providerEventsFound > 0
-                  ? ((r.providerEventsFound - r.gapsDetected) /
-                      r.providerEventsFound) *
-                    100
-                  : 100;
-              const status =
-                r.gapsDetected === r.gapsResolved ? "ok" : "partial";
-              return (
-                <div
-                  key={r.id}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "100px 120px 1fr 90px 90px 100px",
-                    gap: 14,
-                    padding: "14px 24px",
-                    borderBottom:
-                      i < recentRuns.length - 1
-                        ? "1px solid rgba(255,255,255,0.03)"
-                        : "none",
-                    alignItems: "center",
-                  }}
-                >
-                  <span
-                    className="hf-mono"
-                    style={{ fontSize: 11.5, color: "var(--hf-ink-4)" }}
-                  >
-                    {fmtAgo(r.ranAt)} ago
-                  </span>
-                  <ProviderTag name={integ?.provider ?? "unknown"} />
-                  <div
-                    style={{
-                      height: 6,
-                      borderRadius: 3,
-                      background: "rgba(255,255,255,0.05)",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: `${coveragePct}%`,
-                        height: "100%",
-                        background:
-                          r.gapsDetected === r.gapsResolved
-                            ? "#7ed98a"
-                            : "var(--hf-accent)",
-                      }}
-                    />
-                  </div>
-                  <span
-                    className="hf-mono"
-                    style={{
-                      fontSize: 12,
-                      color: "var(--hf-ink-2)",
-                      textAlign: "right",
-                    }}
-                  >
-                    {r.providerEventsFound.toLocaleString()}
-                  </span>
-                  <span
-                    className="hf-num hf-mono"
-                    style={{
-                      fontSize: 12.5,
-                      color:
-                        r.gapsResolved > 0
-                          ? "var(--hf-accent)"
-                          : "var(--hf-ink-4)",
-                      textAlign: "right",
-                      fontWeight: 500,
-                    }}
-                  >
-                    {r.gapsResolved > 0 ? `+${r.gapsResolved}` : "—"}
-                  </span>
-                  <span style={{ justifySelf: "end" }}>
-                    <Pill tone={status === "ok" ? "green" : "amber"}>{status}</Pill>
-                  </span>
-                </div>
-              );
-            })
-          )}
-        </Panel>
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontFamily: mono, fontSize: 11, color: "var(--hf-accent)", background: "var(--hf-accent-soft)", border: "1px solid var(--hf-accent-border)", borderRadius: 8, padding: "8px 13px" }}>
+          <span className="hw-pulse-sky" style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--hf-blue)" }} />
+          {lastRun ? `last run ${fmtAgo(lastRun)} · next in 5m` : "awaiting first run"}
+        </div>
       </div>
-    </>
+
+      {/* parity banner */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr 1fr 1fr", gap: 10, marginBottom: 22 }}>
+        <div style={{ background: "var(--hf-bg-3)", border: `1px solid ${inParity ? "#bfe7cd" : "var(--hf-warm-border)"}`, borderRadius: 12, padding: "18px 20px", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <span style={{ width: 9, height: 9, borderRadius: "50%", background: inParity ? "#22c55e" : "var(--hf-accent-warm)" }} />
+            <div style={{ fontSize: 17, fontWeight: 650, color: inParity ? "#16794a" : "var(--hf-warm)" }}>{inParity ? "In parity" : "Recovering"}</div>
+          </div>
+          <div style={{ fontSize: 12.5, color: "var(--hf-ink-3)", marginTop: 6, fontFamily: mono }}>
+            truth {truth.toLocaleString()} = delivered {delivered.toLocaleString()} + recovered {recovered.toLocaleString()}
+          </div>
+        </div>
+        <MiniStat label="Cadence" value="5 min" />
+        <MiniStat label="Runs today" value={runsToday.toLocaleString()} />
+        <MiniStat label="Gaps today" value={<>{gapsToday}{gapsToday > 0 && <span style={{ fontSize: 12, color: "var(--hf-green)", fontWeight: 500 }}> · all recovered</span>}</>} />
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 10, alignItems: "start" }}>
+        {/* runs log */}
+        <ReconciliationRuns runs={runs} />
+
+        {/* per-topic parity */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ background: "var(--hf-bg-3)", border: "1px solid var(--hf-line)", borderRadius: 12, padding: "18px 20px" }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 14 }}>Parity by topic</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 13 }}>
+              {topicRows.length === 0 ? (
+                <div style={{ fontSize: 12, color: "var(--hf-ink-4)" }}>No topics recorded yet.</div>
+              ) : (
+                topicRows.map((t) => (
+                  <div key={t.eventType}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 11.5, marginBottom: 5 }}>
+                      <span>{t.eventType}</span>
+                      <span style={{ color: t.recovered > 0 ? "var(--hf-warm)" : "var(--hf-green)" }}>100%</span>
+                    </div>
+                    <div style={{ height: 5, borderRadius: 999, background: "var(--hf-line-soft)" }}>
+                      <div style={{ width: "100%", height: 5, borderRadius: 999, background: "#22c55e" }} />
+                    </div>
+                    {t.recovered > 0 && (
+                      <div style={{ fontSize: 10.5, color: "var(--hf-ink-4)", marginTop: 5 }}>{t.recovered} recovered, brought back to parity</div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+          <div style={{ background: "var(--hf-accent-tint)", border: "1px solid var(--hf-accent-border)", borderRadius: 12, padding: "16px 18px" }}>
+            <div style={{ fontFamily: mono, fontSize: 9.5, fontWeight: 600, letterSpacing: "0.07em", textTransform: "uppercase", color: "var(--hf-accent)", marginBottom: 6 }}>How parity is measured</div>
+            <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.55, color: "var(--hf-ink-2)" }}>
+              Each run polls the Admin API for the last window, matches by{" "}
+              <span style={{ fontFamily: mono, fontSize: 10.5 }}>provider_event_id</span>, and counts anything unmatched after the 60-min maturity window as a gap — then replays it.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
-function fmtMoney(cents: number): string {
-  const dollars = cents / 100;
-  if (dollars >= 1_000_000) return `$${(dollars / 1_000_000).toFixed(2)}M`;
-  if (dollars >= 1_000) return `$${(dollars / 1_000).toFixed(1)}K`;
-  return `$${dollars.toFixed(0)}`;
+function MiniStat({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div style={{ background: "var(--hf-bg-3)", border: "1px solid var(--hf-line)", borderRadius: 12, padding: "18px 20px" }}>
+      <div style={{ fontFamily: mono, fontSize: 10, fontWeight: 500, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--hf-ink-4)" }}>{label}</div>
+      <div className="hf-num" style={{ fontSize: 22, fontWeight: 600, marginTop: 6 }}>{value}</div>
+    </div>
+  );
 }
 
-function fmtCount(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-  return n.toLocaleString();
+function fmtAgo(d: Date): string {
+  const m = Math.max(0, Math.floor((Date.now() - new Date(d).getTime()) / 60_000));
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  return `${Math.floor(m / 60)}h ago`;
 }

@@ -39,7 +39,7 @@ export function AuthShell({
           width: 800,
           height: 500,
           background:
-            "radial-gradient(ellipse at center, rgba(129,140,248,0.12) 0%, rgba(129,140,248,0.03) 40%, transparent 70%)",
+            "radial-gradient(ellipse at center, rgba(56,189,248,0.14) 0%, rgba(56,189,248,0.04) 40%, transparent 70%)",
         }}
       />
 
@@ -94,8 +94,9 @@ export function AuthShell({
             className="hw-panel"
             style={{
               padding: 28,
-              background: "var(--hw-bg-2)",
-              boxShadow: "0 30px 80px -20px rgba(0,0,0,0.5)",
+              background: "#ffffff",
+              boxShadow:
+                "0 1px 2px rgba(14,17,22,0.05), 0 24px 64px -32px rgba(14,17,22,0.18)",
             }}
           >
             {children}
@@ -149,8 +150,8 @@ export function AuthError({ message }: { message: string }) {
       style={{
         padding: "10px 14px",
         borderRadius: 8,
-        background: "rgba(248,113,113,0.06)",
-        border: "1px solid rgba(248,113,113,0.22)",
+        background: "#fdeaea",
+        border: "1px solid #f4c4c4",
         color: "var(--hw-red)",
         fontSize: 12,
         marginBottom: 14,

@@ -51,7 +51,7 @@ export async function sendEmailAlert(
   ${payload.diagnosis.remediationActions.length > 0 ? `<h3>Suggested Actions</h3><ul>${payload.diagnosis.remediationActions.map((a) => `<li>${a.type.replace(/_/g, " ")}: ${a.reason}</li>`).join("")}</ul>` : ""}
   ${payload.diagnosis.similarIncidents.length > 0 ? `<p><em>This pattern has occurred ${payload.diagnosis.similarIncidents.length} time(s) before.</em></p>` : ""}
   <hr style="border: 1px solid #eee;" />
-  <p><a href="${payload.dashboardUrl}" style="color: #6366f1;">View in dashboard</a></p>
+  <p><a href="${payload.dashboardUrl}" style="color: #0369a1;">View in dashboard</a></p>
 </div>`;
 
   try {
@@ -62,7 +62,7 @@ export async function sendEmailAlert(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "HookWise <alerts@hookwise.dev>",
+        from: "HookWise <alerts@trueline.dev>",
         to: [destination],
         subject,
         html,

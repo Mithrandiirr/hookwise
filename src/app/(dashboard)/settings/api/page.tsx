@@ -101,7 +101,7 @@ export default function ApiKeysPage() {
             }}
           >
             No API keys generated yet. Generate one to start ingesting webhooks via the
-            HookWise API.
+            Trueline API.
           </div>
         </Panel>
 

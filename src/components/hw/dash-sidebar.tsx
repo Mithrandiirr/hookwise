@@ -1,50 +1,42 @@
 "use client";
 
-// Sidebar — matches .design/hookwise-f.jsx (`DASH_NAV`) layout:
-//   pitch-black bg (#0c0c0c, darker than canvas), unicode glyphs as icons,
-//   left-border + accent-color active state, optional count badges.
-// Production preserves all routable surfaces (Analytics, Scanner, Billing, etc.)
-// even where the design dropped them.
+// Sidebar — matches .design/HookWise Phase 0 (Section 4 · Dashboard):
+//   white surface, mono uppercase group labels (Store / Account), plain-text
+//   items, active state = sky-tint background + 2px sky left border.
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { LogoMark } from "./logo";
+import { ThemeToggleFooter } from "./theme-toggle-footer";
 
 type NavItem = {
   href: string;
   name: string;
-  glyph: string;     // Unicode glyph (matches .design's minimal, Cursor-style markers)
-  count?: number;    // badge — rendered in accent pill when > 0
+  count?: number; // badge — rendered in a sky pill when > 0
 };
 
 type NavGroup = { label: string; items: NavItem[] };
 
-// v8: reconciliation IS the product. Audit + Reconciler lead; dormant surfaces
-// (analytics, scanner, billing, anomalies, health, activity) stay routable but
-// leave the nav until a paying customer pulls them back in.
+// v8: reconciliation IS the product. Audit + Reconciliation lead; dormant
+// surfaces stay routable but leave the nav until a paying customer pulls
+// them back in.
 const GROUPS: NavGroup[] = [
   {
-    label: "Main",
+    label: "Monitor",
     items: [
-      { href: "/audit",            name: "Gap Audit",      glyph: "⌖" },
-      { href: "/reconciliation",   name: "Reconciler",     glyph: "⟲" },
-      { href: "/dashboard",        name: "Overview",       glyph: "▤" },
-      { href: "/events",           name: "Live feed",      glyph: "⚡" },
+      { href: "/dashboard", name: "Overview" },
+      { href: "/reconciliation", name: "Reconciliation" },
+      { href: "/events", name: "Events" },
+      { href: "/replay", name: "Replay" },
     ],
   },
   {
-    label: "Data",
+    label: "Account",
     items: [
-      { href: "/integrations", name: "Endpoints", glyph: "⟿" },
-      { href: "/replay",       name: "Retries",   glyph: "⏱" },
-    ],
-  },
-  {
-    label: "Settings",
-    items: [
-      { href: "/settings",       name: "Project",  glyph: "⚙" },
-      { href: "/settings/api",   name: "API keys", glyph: "⚿" },
-      { href: "/alerts",         name: "Alerts",   glyph: "✉" },
-      { href: "/settings/team",  name: "Members",  glyph: "☰" },
+      { href: "/account", name: "Account" },
+      { href: "/integrations", name: "Integrations" },
+      { href: "/alerts", name: "Alerts" },
+      { href: "/settings", name: "Settings" },
     ],
   },
 ];
@@ -69,9 +61,8 @@ export function DashSidebar({
     router.refresh();
   }
 
-  const orgName = org?.name ?? "acme-production";
+  const orgName = org?.name ?? "your store";
   const userName = user?.name ?? "Operator";
-  const userRole = user?.role ?? "Pro plan";
   const userInit = user?.initials ?? userName.slice(0, 2).toUpperCase();
 
   return (
@@ -79,72 +70,35 @@ export function DashSidebar({
       className="flex flex-col flex-shrink-0"
       style={{
         width: 220,
-        background: "#0c0c0c",
-        borderRight: "1px solid var(--hf-line)",
+        background: "var(--hf-sidebar-bg)",
+        borderRight: "1px solid var(--hf-line-soft)",
         height: "100vh",
         position: "sticky",
         top: 0,
+        padding: "20px 12px 0",
       }}
     >
       {/* Logo */}
-      <div style={{ padding: "20px 18px 16px" }}>
-        <div className="hf-logo">
-          <svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <path d="M12 2 L22 7.5 V16.5 L12 22 L2 16.5 V7.5 Z" fill="#f4f2ee" />
-            <path
-              d="M12 2 L12 22 M2 7.5 L22 16.5 M22 7.5 L2 16.5"
-              stroke="#0a0a0a"
-              strokeWidth="0.8"
-              opacity="0.5"
-            />
-          </svg>
-          <span>HOOKWISE</span>
-        </div>
-      </div>
-
-      {/* Project switcher */}
-      <div style={{ padding: "0 12px 14px" }}>
-        <div
-          style={{
-            background: "var(--hf-bg-3)",
-            border: "1px solid var(--hf-line)",
-            borderRadius: 8,
-            padding: "8px 10px",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            fontSize: 12,
-            color: "var(--hf-ink-2)",
-          }}
-        >
-          <span
-            style={{
-              width: 16,
-              height: 16,
-              borderRadius: 4,
-              background:
-                "linear-gradient(135deg, var(--hf-accent), #0369a1)",
-            }}
-          />
-          <span
-            style={{
-              flex: 1,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {orgName}
-          </span>
-          <span style={{ color: "var(--hf-ink-4)" }}>⌄</span>
-        </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 10px 18px" }}>
+        <LogoMark size={19} />
+        <span style={{ fontSize: 14, fontWeight: 600, letterSpacing: "-0.03em", color: "var(--hf-ink)" }}>trueline</span>
       </div>
 
       {/* Nav groups */}
       <div className="flex-1" style={{ overflow: "auto" }}>
         {GROUPS.map((g) => (
-          <div key={g.label} style={{ padding: "8px 0" }}>
-            <div className="hf-sb-head" style={{ padding: "6px 18px 4px" }}>
+          <div key={g.label}>
+            <div
+              className="hf-mono"
+              style={{
+                fontSize: 10,
+                fontWeight: 500,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "var(--hf-ink-4)",
+                padding: "10px 10px 6px",
+              }}
+            >
               {g.label}
             </div>
             {g.items.map((item) => {
@@ -157,44 +111,33 @@ export function DashSidebar({
                   key={item.href}
                   href={item.href}
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "20px 1fr auto",
-                    gap: 10,
+                    display: "flex",
                     alignItems: "center",
-                    padding: "7px 18px",
+                    gap: 10,
+                    padding: "8px 10px",
+                    borderRadius: 8,
                     fontSize: 13,
+                    fontWeight: isActive ? 550 : 400,
                     color: isActive ? "var(--hf-ink)" : "var(--hf-ink-2)",
-                    background: isActive ? "var(--hf-bg-3)" : "transparent",
+                    background: isActive ? "var(--hf-accent-tint)" : "transparent",
                     borderLeft: isActive
                       ? "2px solid var(--hf-accent)"
                       : "2px solid transparent",
-                    paddingLeft: isActive ? 16 : 18,
                     textDecoration: "none",
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: 14,
-                      color: isActive ? "var(--hf-accent)" : "var(--hf-ink-3)",
-                      width: 18,
-                      textAlign: "center",
-                      lineHeight: 1,
-                      fontFamily: "var(--font-jetbrains-mono), monospace",
-                    }}
-                  >
-                    {item.glyph}
-                  </span>
-                  <span>{item.name}</span>
+                  <span style={{ flex: 1 }}>{item.name}</span>
                   {count ? (
                     <span
+                      className="hf-mono"
                       style={{
                         fontSize: 10,
                         padding: "1px 7px",
                         borderRadius: 999,
-                        background: "var(--hf-accent)",
-                        color: "#0a0a0a",
+                        background: "var(--hf-accent-soft)",
+                        border: "1px solid var(--hf-accent-border)",
+                        color: "var(--hf-accent)",
                         fontWeight: 600,
-                        fontFamily: "var(--font-jetbrains-mono), monospace",
                       }}
                     >
                       {count}
@@ -207,51 +150,66 @@ export function DashSidebar({
         ))}
       </div>
 
+      {/* Theme toggle */}
+      <div style={{ padding: "0 10px 10px", display: "flex", justifyContent: "center" }}>
+        <ThemeToggleFooter />
+      </div>
+
       {/* User footer */}
       <div
         style={{
-          padding: "14px 18px",
-          borderTop: "1px solid var(--hf-line)",
+          margin: "0 -12px",
+          padding: "12px 22px",
+          borderTop: "1px solid var(--hf-line-soft)",
           display: "flex",
           alignItems: "center",
-          gap: 10,
+          gap: 8,
         }}
       >
         <span
           style={{
-            width: 26,
-            height: 26,
+            width: 22,
+            height: 22,
             borderRadius: 999,
-            background: "linear-gradient(135deg, #38bdf8, #0369a1)",
+            background: "var(--hf-accent-soft)",
+            color: "var(--hf-accent)",
             display: "grid",
             placeItems: "center",
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: 600,
-            color: "#0a0a0a",
+            flexShrink: 0,
           }}
         >
           {userInit}
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ color: "var(--hf-ink)", fontSize: 12, fontWeight: 500 }}>
-            {userName}
+          <div
+            style={{
+              color: "var(--hf-ink-2)",
+              fontSize: 12,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {orgName !== "your store" ? orgName : userName}
           </div>
-          <div style={{ color: "var(--hf-ink-3)", fontSize: 11 }}>{userRole}</div>
         </div>
         <button
           type="button"
           onClick={handleSignOut}
           aria-label="Sign out"
+          title="Sign out"
           style={{
             background: "transparent",
             border: "none",
-            color: "var(--hf-ink-3)",
+            color: "var(--hf-ink-4)",
             cursor: "pointer",
             padding: 4,
             fontSize: 14,
           }}
         >
-          ⋯
+          ⏻
         </button>
       </div>
     </aside>

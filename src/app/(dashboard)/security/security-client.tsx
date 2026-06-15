@@ -499,8 +499,8 @@ export function SecurityClient({
                           style={{
                             padding: "10px 14px",
                             borderRadius: 8,
-                            background: "rgba(74,222,128,0.06)",
-                            border: "1px solid rgba(74,222,128,0.22)",
+                            background: "#e8f7ee",
+                            border: "1px solid #c4ebd2",
                             fontSize: 11.5,
                             color: "var(--hw-ink-3)",
                           }}

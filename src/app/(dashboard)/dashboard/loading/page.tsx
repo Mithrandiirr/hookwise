@@ -144,7 +144,7 @@ export default function DashboardLoadingPage() {
             marginTop: 10,
             height: 6,
             borderRadius: 4,
-            background: "rgba(255,255,255,0.05)",
+            background: "#f1f2f5",
             overflow: "hidden",
           }}
         >
@@ -153,9 +153,9 @@ export default function DashboardLoadingPage() {
               height: "100%",
               width: isDone ? "100%" : `${pct}%`,
               background: isError
-                ? "#f29a9a"
+                ? "#dc2626"
                 : isDone
-                  ? "#7ed98a"
+                  ? "#16a34a"
                   : "var(--hf-accent)",
               transition: "width 600ms ease",
             }}
@@ -195,7 +195,7 @@ export default function DashboardLoadingPage() {
                 width: 6,
                 height: 6,
                 borderRadius: 999,
-                background: isError ? "#f29a9a" : isDone ? "#7ed98a" : "#fbbf24",
+                background: isError ? "#dc2626" : isDone ? "#16a34a" : "#d97706",
               }}
             />
             <span>{status}</span>
@@ -212,8 +212,8 @@ export default function DashboardLoadingPage() {
               marginTop: 18,
               padding: "12px 14px",
               borderRadius: 10,
-              border: "1px solid rgba(242,154,154,0.3)",
-              background: "rgba(242,154,154,0.06)",
+              border: "1px solid #f4c4c4",
+              background: "#fdeaea",
               fontSize: 13,
               color: "var(--hf-ink-2)",
               lineHeight: 1.55,
@@ -284,7 +284,7 @@ export default function DashboardLoadingPage() {
               lineHeight: 1.55,
             }}
           >
-            HookWise is pulling your provider&apos;s event history. We cap at 5,000 events so this
+            Trueline is pulling your provider&apos;s event history. We cap at 5,000 events so this
             stays under a minute on first signup. You can leave this tab open — it&apos;ll redirect
             when the back-poll finishes.
           </p>
@@ -368,15 +368,15 @@ function fmtMoney(cents: number) {
 function providerColor(p: string): string {
   switch (p) {
     case "stripe":
-      return "#9ac7ff";
+      return "#635bff";
     case "shopify":
-      return "#9ec396";
+      return "#16a34a";
     case "clerk":
-      return "#c4a5ff";
+      return "#7c5cd6";
     case "resend":
-      return "#f2b37a";
+      return "#b35418";
     case "github":
-      return "#fbbf24";
+      return "#0e1116";
     default:
       return "var(--hf-ink-3)";
   }

@@ -69,7 +69,7 @@ export default function McpPage() {
         right={
           <>
             <Chip tone="violet">
-              <span style={{ width: 6, height: 6, borderRadius: 999, background: "#c4a5ff" }} />
+              <span style={{ width: 6, height: 6, borderRadius: 999, background: "#7c5cd6" }} />
               HTTP + SSE
             </Chip>
             <Link href="/docs/mcp" className="hf-btn outline small">
@@ -91,7 +91,7 @@ export default function McpPage() {
       >
         {/* Hero */}
         <div className="hf-landscape" style={{ padding: "26px 32px" }}>
-          <div className="hf-eyebrow" style={{ color: "#c4a5ff" }}>
+          <div className="hf-eyebrow" style={{ color: "#7c5cd6" }}>
             Pillar 3 · Operational
           </div>
           <h1 className="hf-display" style={{ fontSize: 24, margin: "8px 0 0" }}>
@@ -191,8 +191,8 @@ export default function McpPage() {
                       alignItems: "flex-start",
                       padding: "10px 12px",
                       borderRadius: 8,
-                      border: "1px solid " + (on ? "rgba(196,165,255,0.35)" : "var(--hf-line)"),
-                      background: on ? "rgba(196,165,255,0.05)" : "transparent",
+                      border: "1px solid " + (on ? "#ddd0f5" : "var(--hf-line)"),
+                      background: on ? "#efeafb" : "transparent",
                       textAlign: "left",
                       cursor: "pointer",
                       color: "var(--hf-ink)",
@@ -203,8 +203,8 @@ export default function McpPage() {
                         width: 14,
                         height: 14,
                         borderRadius: 4,
-                        border: "1px solid " + (on ? "#c4a5ff" : "var(--hf-line-2)"),
-                        background: on ? "#c4a5ff" : "transparent",
+                        border: "1px solid " + (on ? "#7c5cd6" : "var(--hf-line-2)"),
+                        background: on ? "#7c5cd6" : "transparent",
                         display: "grid",
                         placeItems: "center",
                         fontSize: 10,
@@ -241,8 +241,8 @@ export default function McpPage() {
                             fontSize: 9,
                             padding: "2px 6px",
                             borderRadius: 999,
-                            background: "rgba(251,191,36,0.12)",
-                            color: "#fbbf24",
+                            background: "#fdeada",
+                            color: "#d97706",
                             letterSpacing: "0.06em",
                             textTransform: "uppercase",
                           }}
@@ -277,14 +277,14 @@ export default function McpPage() {
                 style={{
                   marginTop: 14,
                   padding: "10px 12px",
-                  border: "1px solid rgba(251,191,36,0.3)",
+                  border: "1px solid #f4c9ad",
                   borderRadius: 8,
-                  background: "rgba(251,191,36,0.06)",
+                  background: "#fdeada",
                   fontSize: 12,
                   color: "var(--hf-ink-2)",
                 }}
               >
-                <span className="hf-mono" style={{ color: "#fbbf24" }}>⚠</span>{" "}
+                <span className="hf-mono" style={{ color: "#d97706" }}>⚠</span>{" "}
                 {writeScopesOn} write {writeScopesOn === 1 ? "scope" : "scopes"} enabled. Agents using this
                 token can re-deliver events or trigger reconciliation runs. Audit log captures every call.
               </div>
@@ -366,14 +366,14 @@ export default function McpPage() {
                   style={{
                     marginTop: 14,
                     padding: "12px 14px",
-                    border: "1px solid rgba(126,217,138,0.25)",
+                    border: "1px solid #c4ebd2",
                     borderRadius: 8,
-                    background: "rgba(126,217,138,0.06)",
+                    background: "#e8f7ee",
                     fontSize: 12,
                     color: "var(--hf-ink-2)",
                   }}
                 >
-                  <span style={{ color: "#7ed98a" }}>✓</span> Token <span className="hf-mono">{tokenName}</span>{" "}
+                  <span style={{ color: "#16a34a" }}>✓</span> Token <span className="hf-mono">{tokenName}</span>{" "}
                   created. This is the only time we&apos;ll show the secret.
                 </div>
               </>
@@ -394,7 +394,7 @@ export default function McpPage() {
               <p style={{ margin: 0 }}>
                 Drop the JSON into <span className="hf-mono">~/.cursor/mcp.json</span> (Cursor) or
                 <span className="hf-mono"> ~/Library/Application Support/Claude/claude_desktop_config.json</span>{" "}
-                (Claude Desktop). Restart the client and HookWise tools appear in the agent&apos;s tool palette.
+                (Claude Desktop). Restart the client and Trueline tools appear in the agent&apos;s tool palette.
               </p>
             </div>
           </div>

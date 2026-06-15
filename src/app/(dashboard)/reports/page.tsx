@@ -161,8 +161,8 @@ export default async function ReportsPage() {
                           className="hw-mono"
                           style={{
                             padding: "12px 14px",
-                            background: "rgba(251,191,36,0.06)",
-                            border: "1px solid rgba(251,191,36,0.22)",
+                            background: "#fdeada",
+                            border: "1px solid #f4c9ad",
                             borderRadius: 8,
                             fontSize: 12,
                             color: "var(--hw-ink-3)",

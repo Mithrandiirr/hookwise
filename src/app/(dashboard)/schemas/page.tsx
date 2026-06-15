@@ -95,15 +95,15 @@ export default async function SchemasPage() {
             label="DRIFT · THIS WEEK"
             value={driftedThisWeek}
             sub={driftedThisWeek === 0 ? "no shape changes" : "version bumps"}
-            color={driftedThisWeek > 0 ? "#fbbf24" : "#7ed98a"}
-            accent={driftedThisWeek > 0 ? "#fbbf24" : "#7ed98a"}
+            color={driftedThisWeek > 0 ? "#d97706" : "#16a34a"}
+            accent={driftedThisWeek > 0 ? "#d97706" : "#16a34a"}
           />
           <StatTile
             label="BREAKING"
             value="0"
             sub="last 90 days"
-            color="#7ed98a"
-            accent="#7ed98a"
+            color="#16a34a"
+            accent="#16a34a"
           />
           <StatTile
             label="COVERAGE"
@@ -144,7 +144,7 @@ export default async function SchemasPage() {
                 color: "var(--hf-ink-4)",
               }}
             >
-              No schemas inferred yet. They show up once HookWise has enough events to
+              No schemas inferred yet. They show up once Trueline has enough events to
               fingerprint shapes per type.
             </div>
           ) : (
@@ -161,7 +161,7 @@ export default async function SchemasPage() {
                     padding: "14px 24px",
                     borderBottom:
                       i < a.length - 1
-                        ? "1px solid rgba(255,255,255,0.03)"
+                        ? "1px solid #f1f2f5"
                         : "none",
                     alignItems: "center",
                   }}

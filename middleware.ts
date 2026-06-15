@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/login", "/signup", "/auth/callback", "/auth/reset-password", "/forgot-password", "/scan"];
+const PUBLIC_ROUTES = ["/login", "/signup", "/auth/callback", "/auth/reset-password", "/forgot-password", "/scan", "/status", "/api/report/preview"];
 
 function isPublic(pathname: string): boolean {
   // Static assets and Next.js internals
@@ -10,6 +10,11 @@ function isPublic(pathname: string): boolean {
     pathname.startsWith("/favicon") ||
     pathname.includes(".")
   ) {
+    return true;
+  }
+
+  // Marketing landing — the gap-audit pitch must be visible to logged-out visitors
+  if (pathname === "/") {
     return true;
   }
 

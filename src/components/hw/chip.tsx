@@ -3,13 +3,13 @@ import type { CSSProperties, ReactNode } from "react";
 type ChipTone = "green" | "amber" | "red" | "indigo" | "blue" | "violet" | "warm";
 
 const TONE_STYLES: Record<ChipTone, { color: string; bg: string; border: string }> = {
-  green: { color: "#7ed98a", bg: "rgba(126,217,138,0.08)", border: "rgba(126,217,138,0.22)" },
-  amber: { color: "#fbbf24", bg: "rgba(251,191,36,0.08)", border: "rgba(251,191,36,0.22)" },
-  red: { color: "#f29a9a", bg: "rgba(242,154,154,0.08)", border: "rgba(242,154,154,0.22)" },
-  indigo: { color: "#c4a5ff", bg: "rgba(196,165,255,0.08)", border: "rgba(196,165,255,0.22)" },
-  blue: { color: "#9ac7ff", bg: "rgba(154,199,255,0.08)", border: "rgba(154,199,255,0.22)" },
-  violet: { color: "#c4a5ff", bg: "rgba(196,165,255,0.08)", border: "rgba(196,165,255,0.22)" },
-  warm: { color: "#f2b37a", bg: "rgba(242,179,122,0.08)", border: "rgba(242,179,122,0.22)" },
+  green: { color: "#16a34a", bg: "#e8f7ee", border: "#c4ebd2" },
+  amber: { color: "#b35418", bg: "#fdeada", border: "#f4c9ad" },
+  red: { color: "#dc2626", bg: "#fdeaea", border: "#f4c4c4" },
+  indigo: { color: "#0369a1", bg: "#e8f4fb", border: "#c8e4f6" },
+  blue: { color: "#0369a1", bg: "#e8f4fb", border: "#c8e4f6" },
+  violet: { color: "#7c5cd6", bg: "#efeafb", border: "#ddd0f5" },
+  warm: { color: "#b35418", bg: "#fff8f3", border: "#f4c9ad" },
 };
 
 export function Chip({
@@ -38,7 +38,7 @@ export function Chip({
         fontFamily: "var(--font-jetbrains-mono), monospace",
         letterSpacing: "0.02em",
         border: `1px solid ${t ? t.border : "var(--hf-line)"}`,
-        background: t ? t.bg : "rgba(255,255,255,0.025)",
+        background: t ? t.bg : "#fbfbfc",
         color: t ? t.color : "var(--hf-ink-2)",
         ...style,
       }}

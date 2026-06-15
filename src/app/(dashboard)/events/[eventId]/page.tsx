@@ -136,19 +136,19 @@ export default async function EventDetailPage({
               gap: 12,
               borderColor:
                 bannerTone === "green"
-                  ? "rgba(74,222,128,0.22)"
+                  ? "#c4ebd2"
                   : bannerTone === "red"
-                    ? "rgba(248,113,113,0.22)"
+                    ? "#f4c4c4"
                     : bannerTone === "amber"
-                      ? "rgba(251,191,36,0.22)"
+                      ? "#f4c9ad"
                       : "var(--hw-line)",
               background:
                 bannerTone === "green"
-                  ? "rgba(74,222,128,0.05)"
+                  ? "#e8f7ee"
                   : bannerTone === "red"
-                    ? "rgba(248,113,113,0.05)"
+                    ? "#fdeaea"
                     : bannerTone === "amber"
-                      ? "rgba(251,191,36,0.05)"
+                      ? "#fdeada"
                       : "var(--hw-bg-2)",
             }}
           >

@@ -8,7 +8,7 @@ const config: Record<
     label: "Critical",
     bg: "bg-red-500/15",
     text: "text-red-400",
-    glow: "shadow-[0_0_12px_rgba(248,113,113,0.3)]",
+    glow: "shadow-[0_0_12px_#f4c4c4]",
   },
   high: {
     label: "High",

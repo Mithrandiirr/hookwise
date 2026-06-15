@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; padding: 0; background: transparent; }
+  </style>
+</helmet>
+
+<div style="width: 840px; background: #ffffff; color: #16181d; font-family: Inter, ui-sans-serif, system-ui, sans-serif; letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 2px rgba(16,18,24,0.06), 0 24px 64px -32px rgba(16,18,24,0.25)">
+
+  <!-- Document header -->
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 28px 52px; border-bottom: 1px solid #e9eaef">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="width: 24px; height: 24px; border-radius: 6px; background: #16181d; color: #ffffff; display: grid; place-items: center; font-size: 12px; font-weight: 700; letter-spacing: 0">{{ markLetter }}</div>
+      <div style="font-size: 14.5px; font-weight: 650; letter-spacing: -0.01em">{{ brandName }}</div>
+    </div>
+    <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: #8b909a">7-Day Gap Audit · Confidential</div>
+  </div>
+
+  <!-- Title / verdict -->
+  <div style="padding: 44px 52px 36px">
+    <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: #8b909a; margin-bottom: 16px">Brightloom Goods · brightloom.myshopify.com · Jun 2 – Jun 9, 2026</div>
+    <h1 style="margin: 0 0 14px; font-size: 30px; line-height: 1.18; font-weight: 600; letter-spacing: -0.025em; text-wrap: pretty">Shopify created 4,312 orders.<br>It told your systems about 4,297.</h1>
+    <p style="margin: 0; font-size: 15.5px; line-height: 1.5; color: #4b5160; max-width: 600px; text-wrap: pretty">15 events were never delivered to your endpoint — orders worth <strong style="color: #dd5008; font-weight: 650; font-variant-numeric: tabular-nums">$2,840.18</strong> that your fulfillment, email, and analytics never saw. None of them appear as failures in your Shopify delivery logs.</p>
+  </div>
+
+  <!-- Stat tiles -->
+  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1.2fr; gap: 10px; padding: 0 52px 40px">
+    <div style="border: 1px solid #e9eaef; border-radius: 8px; padding: 16px 18px">
+      <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #8b909a">Orders created</div>
+      <div style="font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin-top: 8px; font-variant-numeric: tabular-nums">4,312</div>
+      <div style="font-size: 11.5px; color: #8b909a; margin-top: 3px">Admin API · ground truth</div>
+    </div>
+    <div style="border: 1px solid #e9eaef; border-radius: 8px; padding: 16px 18px">
+      <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #8b909a">Webhooks delivered</div>
+      <div style="font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin-top: 8px; font-variant-numeric: tabular-nums">4,297</div>
+      <div style="font-size: 11.5px; color: #8b909a; margin-top: 3px">recorded at our endpoint</div>
+    </div>
+    <div style="border: 1px solid #e9eaef; border-radius: 8px; padding: 16px 18px">
+      <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #8b909a">Missed events</div>
+      <div style="font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin-top: 8px; font-variant-numeric: tabular-nums">15</div>
+      <div style="font-size: 11.5px; color: #8b909a; margin-top: 3px">12 confirmed · 3 unconfirmed</div>
+    </div>
+    <div style="border: 1px solid #f4c9ad; background: #fff8f3; border-radius: 8px; padding: 16px 18px">
+      <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: #b35418">Revenue at risk</div>
+      <div style="font-size: 26px; font-weight: 650; letter-spacing: -0.02em; margin-top: 8px; color: #dd5008; font-variant-numeric: tabular-nums">$2,840.18</div>
+      <div style="font-size: 11.5px; color: #b35418; margin-top: 3px">order value never delivered</div>
+    </div>
+  </div>
+
+  <!-- Gap table -->
+  <div style="padding: 0 52px 14px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px">
+      <h2 style="margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -0.015em">What Shopify never delivered</h2>
+      <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10.5px; color: #8b909a">matched by provider_event_id</div>
+    </div>
+    <div style="border: 1px solid #e9eaef; border-radius: 8px; overflow: hidden">
+      <div style="display: grid; grid-template-columns: 110px 130px 1fr 130px 110px; gap: 12px; padding: 9px 18px; background: #f7f7f9; border-bottom: 1px solid #e9eaef; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.07em; text-transform: uppercase; color: #8b909a">
+      <div>Order</div><div>Placed</div><div>Topic</div><div>Status</div><div style="text-align: right">Value</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 110px 130px 1fr 130px 110px; gap: 12px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f0f1f4; font-size: 13px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 500">#45-2381</div><div style="color: #6b7180">Jun 4, 09:12</div><div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; color: #4b5160">orders/create</div><div><span style="display: inline-flex; align-items: center; gap: 5px; background: #16181d; color: #ffffff; border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 550">confirmed</span></div><div style="text-align: right; font-weight: 600; color: #dd5008; font-variant-numeric: tabular-nums">$214.50</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 110px 130px 1fr 130px 110px; gap: 12px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f0f1f4; font-size: 13px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 500">#45-2386</div><div style="color: #6b7180">Jun 4, 09:14</div><div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; color: #4b5160">orders/create</div><div><span style="display: inline-flex; align-items: center; gap: 5px; background: #16181d; color: #ffffff; border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 550">confirmed</span></div><div style="text-align: right; font-weight: 600; color: #dd5008; font-variant-numeric: tabular-nums">$89.00</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 110px 130px 1fr 130px 110px; gap: 12px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f0f1f4; font-size: 13px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 500">#45-2402</div><div style="color: #6b7180">Jun 4, 09:31</div><div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; color: #4b5160">orders/create</div><div><span style="display: inline-flex; align-items: center; gap: 5px; background: #16181d; color: #ffffff; border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 550">confirmed</span></div><div style="text-align: right; font-weight: 600; color: #dd5008; font-variant-numeric: tabular-nums">$412.95</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 110px 130px 1fr 130px 110px; gap: 12px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f0f1f4; font-size: 13px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 500">#45-2417</div><div style="color: #6b7180">Jun 4, 10:02</div><div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; color: #4b5160">orders/create</div><div><span style="display: inline-flex; align-items: center; gap: 5px; background: #16181d; color: #ffffff; border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 550">confirmed</span></div><div style="text-align: right; font-weight: 600; color: #dd5008; font-variant-numeric: tabular-nums">$156.20</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 110px 130px 1fr 130px 110px; gap: 12px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f0f1f4; font-size: 13px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 500">#46-0118</div><div style="color: #6b7180">Jun 6, 22:47</div><div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; color: #4b5160">orders/paid</div><div><span style="display: inline-flex; align-items: center; gap: 5px; background: #16181d; color: #ffffff; border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 550">confirmed</span></div><div style="text-align: right; font-weight: 600; color: #dd5008; font-variant-numeric: tabular-nums">$738.40</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 110px 130px 1fr 130px 110px; gap: 12px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f0f1f4; font-size: 13px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 500">#46-0124</div><div style="color: #6b7180">Jun 6, 23:05</div><div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; color: #4b5160">orders/create</div><div><span style="display: inline-flex; align-items: center; gap: 5px; background: #16181d; color: #ffffff; border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 550">confirmed</span></div><div style="text-align: right; font-weight: 600; color: #dd5008; font-variant-numeric: tabular-nums">$64.99</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 110px 130px 1fr 130px 110px; gap: 12px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f0f1f4; font-size: 13px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 500">#46-0131</div><div style="color: #6b7180">Jun 6, 23:18</div><div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; color: #4b5160">orders/create</div><div><span style="display: inline-flex; align-items: center; gap: 5px; background: #16181d; color: #ffffff; border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 550">confirmed</span></div><div style="text-align: right; font-weight: 600; color: #dd5008; font-variant-numeric: tabular-nums">$327.75</div>
+      </div>
+      <div style="display: grid; grid-template-columns: 110px 130px 1fr 130px 110px; gap: 12px; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f0f1f4; font-size: 13px">
+        <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; font-weight: 500">#46-0140</div><div style="color: #6b7180">Jun 6, 23:41</div><div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; color: #4b5160">orders/create</div><div><span style="display: inline-flex; align-items: center; gap: 5px; border: 1px solid #d4d6dd; color: #6b7180; border-radius: 999px; padding: 1px 9px; font-size: 10.5px; font-weight: 550">unconfirmed</span></div><div style="text-align: right; font-weight: 600; color: #b35418; font-variant-numeric: tabular-nums">$98.50</div>
+      </div>
+      <div style="padding: 10px 18px; font-size: 12.5px; color: #8b909a; background: #fbfbfc">… 7 more events in the full export (CSV attached)</div>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 12px 16px; background: #f7f7f9; border-radius: 8px">
+      <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: #4b5160; padding-top: 2px; flex-shrink: 0">Pattern</div>
+      <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4b5160">12 of 15 gaps occurred in two bursts — Jun 4, 09:00–10:15 and Jun 6, 22:30–23:45 — consistent with provider-side delivery incidents, not endpoint failures. Your endpoint returned 2xx throughout both windows.</p>
+    </div>
+  </div>
+
+  <!-- Subscription health -->
+  <div style="padding: 30px 52px 8px">
+    <h2 style="margin: 0 0 14px; font-size: 16px; font-weight: 650; letter-spacing: -0.015em">Subscription health findings</h2>
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: grid; grid-template-columns: 88px 1fr; gap: 16px; border: 1px solid #e9eaef; border-radius: 8px; padding: 16px 18px">
+        <div><span style="display: inline-block; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.07em; background: #b3261e; color: #ffffff; border-radius: 4px; padding: 3px 8px">HIGH</span></div>
+        <div>
+          <div style="font-size: 13.5px; font-weight: 600">orders/updated subscription is degrading</div>
+          <p style="margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #6b7180">p95 endpoint response 4.8s · 19 delivery failures this week. Shopify silently auto-removes subscriptions that keep failing — this one is on that path. No notification is sent when it happens.</p>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 88px 1fr; gap: 16px; border: 1px solid #e9eaef; border-radius: 8px; padding: 16px 18px">
+        <div><span style="display: inline-block; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.07em; background: #b35418; color: #ffffff; border-radius: 4px; padding: 3px 8px">MEDIUM</span></div>
+        <div>
+          <div style="font-size: 13.5px; font-weight: 600">API version fall-forward risk</div>
+          <p style="margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #6b7180">Your subscriptions are pinned to <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px">2025-10</span>; the store now serves <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px">2026-04</span>. When 2025-10 is retired, payload shapes change without warning.</p>
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 88px 1fr; gap: 16px; border: 1px solid #e9eaef; border-radius: 8px; padding: 16px 18px">
+        <div><span style="display: inline-block; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.07em; background: #e9eaef; color: #4b5160; border-radius: 4px; padding: 3px 8px">HEALTHY</span></div>
+        <div>
+          <div style="font-size: 13.5px; font-weight: 600">orders/create endpoint is healthy</div>
+          <p style="margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: #6b7180">99.7% 2xx · p95 response 312ms. The gaps above were not caused by your endpoint.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Methodology -->
+  <div style="padding: 28px 52px 0">
+    <div style="border-top: 1px solid #e9eaef; padding-top: 22px">
+      <div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8b909a; margin-bottom: 8px">How to read this report</div>
+      <p style="margin: 0; font-size: 12.5px; line-height: 1.6; color: #6b7180; max-width: 640px">Ground truth is your Admin API, polled read-only — we never touch your existing webhook flow. An event is flagged only after a 60-minute maturity window, because provider delays of 20+ minutes are documented. Every gap is matched by provider event ID and double-checked against the delivery log. When we cannot be certain, we say <em>unconfirmed</em> — never <em>lost</em>.</p>
+    </div>
+  </div>
+
+  <!-- CTA band -->
+  <div style="margin: 28px 52px 0; background: #16181d; border-radius: 10px; padding: 26px 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px">
+    <div>
+      <div style="font-size: 16px; font-weight: 650; color: #ffffff; letter-spacing: -0.015em">{{ ctaTitle }}</div>
+      <p style="margin: 5px 0 0; font-size: 12.5px; line-height: 1.5; color: #b9bdc7; max-width: 460px">{{ ctaSub }}</p>
+    </div>
+    <div style="background: #ffffff; color: #16181d; border-radius: 999px; padding: 10px 20px; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; flex-shrink: 0">{{ ctaButton }}</div>
+  </div>
+
+  <!-- Footer -->
+  <div style="display: flex; justify-content: space-between; align-items: center; padding: 22px 52px 26px; margin-top: 8px; font-size: 11.5px; color: #8b909a">
+    <div>{{ brandName }} · {{ brandDomain }}</div>
+    <div>Generated Jun 9, 2026 · Prepared for Brightloom Goods</div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 880, &quot;height&quot;: 1660}, &quot;brandName&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;HookWise&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;markLetter&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;H&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;brandDomain&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;hookwise.dev&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;ctaTitle&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Turn this on continuously.&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;ctaSub&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Revenue Assurance reconciles every 5 minutes and recovers gaps automatically — $29/store/month.&quot;, &quot;tsType&quot;: &quot;string&quot;}, &quot;ctaButton&quot;: {&quot;editor&quot;: &quot;text&quot;, &quot;default&quot;: &quot;Start monitoring — $29/mo&quot;, &quot;tsType&quot;: &quot;string&quot;}}"></script>
+</body>
+</html>

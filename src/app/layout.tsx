@@ -33,8 +33,9 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "HookWise - Webhook Intelligence Platform",
-  description: "Never miss a webhook. Know why when things break.",
+  title: "trueline — Find the orders Shopify never told you about",
+  description:
+    "Shopify drops webhooks — their own docs tell you to build reconciliation. We are that, as a service. Run a free 7-day gap audit on your store.",
 };
 
 export default function RootLayout({
@@ -43,19 +44,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <head>
-        <script
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("hookwise-theme");var d=document.documentElement;if(t==="light"){d.classList.remove("dark")}else if(t==="dark"){d.classList.add("dark")}else{d.classList.add("dark")}}catch(e){}})()`,
-          }}
-        />
-      </head>
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${jetbrainsMono.variable} ${instrumentSerif.variable} antialiased`}
       >
-        <ThemeProvider defaultTheme="dark">{children}</ThemeProvider>
+        <ThemeProvider defaultTheme="light">{children}</ThemeProvider>
       </body>
     </html>
   );

@@ -161,22 +161,22 @@ export default async function AnomaliesPage({
             label="OPEN"
             value={counts.open}
             sub="awaiting action"
-            color="#f29a9a"
-            accent="#f29a9a"
+            color="#dc2626"
+            accent="#dc2626"
           />
           <StatTile
             label="MONITORING"
             value={counts.monitoring}
             sub="fix applied · watching"
-            color="#fbbf24"
-            accent="#fbbf24"
+            color="#d97706"
+            accent="#d97706"
           />
           <StatTile
             label="RESOLVED · 30d"
             value={counts.resolved}
             sub="closed automatically"
-            color="#7ed98a"
-            accent="#7ed98a"
+            color="#16a34a"
+            accent="#16a34a"
           />
           {tier.revenueTrackingEnabled ? (
             <StatTile
@@ -378,10 +378,10 @@ export default async function AnomaliesPage({
                               style={{
                                 color:
                                   (d.confidence ?? 0) > 0.9
-                                    ? "#7ed98a"
+                                    ? "#16a34a"
                                     : (d.confidence ?? 0) > 0.8
                                       ? "var(--hf-accent)"
-                                      : "#fbbf24",
+                                      : "#d97706",
                               }}
                             >
                               {(d.confidence ?? 0).toFixed(2)}
@@ -555,8 +555,8 @@ function DetailPane({
           color={
             revenueTrackingEnabled
               ? revenue != null && revenue > 0
-                ? "#fbbf24"
-                : "#7ed98a"
+                ? "#d97706"
+                : "#16a34a"
               : "var(--hf-ink)"
           }
         />
@@ -595,7 +595,7 @@ function DetailPane({
                 letterSpacing: "0.08em",
               }}
             >
-              Root cause · HookWise AI
+              Root cause · Trueline AI
             </span>
           </div>
           {d.why && (
@@ -639,7 +639,7 @@ function DetailPane({
                 {Math.round(ctx.baseline.avgResponseMs)}ms
               </span>{" "}
               →{" "}
-              <span className="hf-mono" style={{ color: "#fbbf24" }}>
+              <span className="hf-mono" style={{ color: "#d97706" }}>
                 {Math.round(ctx.current.avgResponseMs)}ms
               </span>{" "}
               at detection time.
@@ -693,7 +693,7 @@ function DetailPane({
                   padding: "12px 20px",
                   borderBottom:
                     i < arr.length - 1
-                      ? "1px solid rgba(255,255,255,0.04)"
+                      ? "1px solid #f1f2f5"
                       : "none",
                   alignItems: "start",
                 }}
@@ -712,7 +712,7 @@ function DetailPane({
                   className="hf-mono"
                   style={{
                     fontSize: 12,
-                    color: "#c4a5ff",
+                    color: "#7c5cd6",
                     letterSpacing: "0.02em",
                   }}
                 >

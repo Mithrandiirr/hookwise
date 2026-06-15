@@ -164,8 +164,8 @@ export function ScannerFlow() {
             style={{
               padding: "10px 14px",
               borderRadius: 8,
-              background: "rgba(248,113,113,0.06)",
-              border: "1px solid rgba(248,113,113,0.22)",
+              background: "#fdeaea",
+              border: "1px solid #f4c4c4",
               color: "var(--hw-red)",
               fontSize: 12,
               marginBottom: 14,
@@ -294,9 +294,9 @@ function ScanResults({
           style={{
             gap: 10,
             padding: "6px 12px 6px 10px",
-            border: "1px solid rgba(74,222,128,0.22)",
+            border: "1px solid #c4ebd2",
             borderRadius: 999,
-            background: "rgba(74,222,128,0.06)",
+            background: "#e8f7ee",
             marginBottom: 18,
           }}
         >
@@ -399,8 +399,8 @@ function ScanResults({
           style={{
             padding: "10px 14px",
             borderRadius: 8,
-            background: "rgba(251,191,36,0.06)",
-            border: "1px solid rgba(251,191,36,0.22)",
+            background: "#fdeada",
+            border: "1px solid #f4c9ad",
             color: "var(--hw-amber)",
             fontSize: 12,
             textAlign: "center",
@@ -443,7 +443,7 @@ function ScanResults({
               lineHeight: 1.6,
             }}
           >
-            Sign up to monitor your webhooks in real time. HookWise catches
+            Sign up to monitor your webhooks in real time. Trueline catches
             missing events, diagnoses failures, and tracks dollar impact
             automatically.
           </p>

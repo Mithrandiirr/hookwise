@@ -1,20 +1,35 @@
 import Link from "next/link";
 
-export function Logo({ size = 24, href = "/" }: { size?: number; href?: string | null }) {
+// trueline mark — two record lines; the lower one has a gap a sky node fills (the diff,
+// as a monogram). Ink lines flip with the theme; the node is the only brand-blue. Per .design/Brand.
+export function LogoMark({ size = 22 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 32 32"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden
+      style={{ display: "block", flexShrink: 0 }}
+    >
+      <rect x="5" y="11" width="22" height="4" rx="2" fill="var(--hf-ink)" />
+      <rect x="5" y="18" width="9" height="4" rx="2" fill="var(--hf-ink)" />
+      <rect x="20" y="18" width="7" height="4" rx="2" fill="var(--hf-ink)" />
+      <rect x="15" y="17.5" width="4" height="5" rx="1.5" fill="var(--hf-blue)" />
+    </svg>
+  );
+}
+
+export function Logo({ size = 22, href = "/" }: { size?: number; href?: string | null }) {
   const inner = (
     <div className="flex items-center gap-[9px]">
-      <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className="block">
-        <defs>
-          <linearGradient id="hw-logo-grad" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stopColor="#a5b4fc" />
-            <stop offset="1" stopColor="#6366f1" />
-          </linearGradient>
-        </defs>
-        <rect x="1" y="1" width="22" height="22" rx="6" fill="url(#hw-logo-grad)" />
-        <path d="M7.5 8.5v7M16.5 8.5v7M7.5 12h9" stroke="#0a0d14" strokeWidth="1.6" strokeLinecap="round" />
-        <circle cx="12" cy="12" r="1.6" fill="#0a0d14" />
-      </svg>
-      <span className="text-[14px] font-semibold tracking-[-0.01em] text-[var(--hw-ink)]">HookWise</span>
+      <LogoMark size={size} />
+      <span
+        style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.03em", color: "var(--hf-ink)" }}
+      >
+        trueline
+      </span>
     </div>
   );
   if (!href) return inner;

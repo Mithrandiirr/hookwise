@@ -17,6 +17,8 @@ export {
   Panel,
   Pill,
   ProviderTag,
+  Toggle,
+  LineIcon,
   fmtAgo,
 } from "./design-primitives";
-export type { PillTone } from "./design-primitives";
+export type { PillTone, LineIconName } from "./design-primitives";

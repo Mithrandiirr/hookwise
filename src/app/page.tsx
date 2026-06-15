@@ -1,130 +1,300 @@
-// v8 landing — one page, one CTA: "Run a free 7-day gap audit on your store."
-// Lead with the gap and the dollars. Never lead with AI, MCP, buffering, or "platform".
-// Price anchors against DIY reconciliation (2–3 weeks of engineering), never Hookdeck.
-// No orange on this page — sky blue everywhere.
+// v8 landing — Daylight (.design/HookWise Phase 0, Section 1).
+// One page, one CTA: "Run a free 7-day gap audit."
+// Sky blue (var(--hf-accent)) is the only action color; orange (var(--hf-accent-warm)) appears
+// exclusively on dollar amounts. Lead with the gap and the dollars.
 
 import Link from "next/link";
+import { LogoMark } from "@/components/hw/logo";
 import { ThemeToggleFooter } from "@/components/hw/theme-toggle-footer";
 
 const CTA_HREF = "/signup";
-const CTA_LABEL = "Run a free 7-day gap audit on your store →";
 
-/* ════════════════ Logo ════════════════ */
-const HFLogo = ({ size = 18 }: { size?: number }) => (
-  <div className="hf-logo">
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M12 2 L22 7.5 V16.5 L12 22 L2 16.5 V7.5 Z" fill="#f4f2ee" />
-      <path
-        d="M12 2 L12 22 M2 7.5 L22 16.5 M22 7.5 L2 16.5"
-        stroke="#0a0a0a"
-        strokeWidth="0.8"
-        opacity="0.5"
-      />
-    </svg>
-    <span>HOOKWISE</span>
-  </div>
-);
+const mono = "var(--font-jetbrains-mono), 'JetBrains Mono', ui-monospace, monospace";
 
 /* ════════════════ Nav ════════════════ */
-const HFNav = () => (
-  <div className="hf-nav-wrap">
-    <div className="hf-nav">
-      <HFLogo />
-      <div className="hf-nav-links">
-        <Link href="#evidence">The problem</Link>
-        <Link href="#how">How it works</Link>
-        <Link href="#pricing">Pricing</Link>
-      </div>
-      <div className="hf-nav-right">
-        <Link href="/login" className="hf-btn outline small">
-          Sign in
-        </Link>
-        <Link href={CTA_HREF} className="hf-btn pill small">
-          Run free audit
-        </Link>
-      </div>
+const Nav = () => (
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "200px 1fr 240px",
+      alignItems: "center",
+      padding: "18px 32px",
+      borderBottom: "1px solid var(--hf-line-soft)",
+      maxWidth: 1280,
+      margin: "0 auto",
+    }}
+  >
+    <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+      <LogoMark size={22} />
+      <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: "-0.03em" }}>trueline</div>
+    </div>
+    <div className="hf-nav-links" style={{ display: "flex", gap: 4, justifyContent: "center" }}>
+      <Link href="#how">How it works</Link>
+      <Link href="#evidence">Evidence</Link>
+      <Link href="#pricing">Pricing</Link>
+    </div>
+    <div style={{ display: "flex", gap: 6, alignItems: "center", justifyContent: "flex-end" }}>
+      <Link
+        href="/login"
+        style={{
+          color: "var(--hf-ink-2)",
+          fontSize: 13.5,
+          fontWeight: 500,
+          padding: "8px 14px",
+          borderRadius: 8,
+          textDecoration: "none",
+        }}
+      >
+        Sign in
+      </Link>
+      <Link href={CTA_HREF} className="hf-btn pill small" style={{ fontSize: 13.5, padding: "9px 18px" }}>
+        Run free audit
+      </Link>
     </div>
   </div>
 );
 
-/* ════════════════ Sample report card (hero right) ════════════════ */
-const SampleReport = () => (
-  <div className="hf-win" style={{ width: "100%" }}>
+/* ════════════════ Diff ledger visual (hero right) ════════════════ */
+
+function OkRow({ id, amount, received, last }: { id: string; amount: string; received: string; last?: boolean }) {
+  return (
     <div
       style={{
-        display: "flex",
+        display: "grid",
+        gridTemplateColumns: "1fr 44px 1fr",
         alignItems: "center",
-        gap: 12,
-        padding: "12px 16px",
-        background: "var(--hf-window-chrome)",
-        borderBottom: "1px solid var(--hf-line)",
+        padding: "11px 18px",
+        borderBottom: last ? "none" : "1px solid var(--hf-line-soft)",
       }}
     >
-      <span
-        className="hf-mono"
-        style={{
-          fontSize: 10,
-          color: "var(--hf-accent)",
-          letterSpacing: "0.12em",
-          textTransform: "uppercase",
-        }}
-      >
-        Gap Report · sample
-      </span>
-      <span style={{ width: 1, height: 14, background: "var(--hf-line)" }} />
-      <span className="hf-mono" style={{ fontSize: 11.5, color: "var(--hf-ink-2)" }}>
-        your-store.myshopify.com
-      </span>
-      <div style={{ flex: 1 }} />
-      <span className="hf-mono" style={{ fontSize: 11, color: "var(--hf-ink-4)" }}>
-        7 days
-      </span>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+        <span style={{ fontFamily: mono, fontSize: 12, fontWeight: 500 }}>{id}</span>
+        <span className="hf-num" style={{ fontFamily: mono, fontSize: 11.5, color: "var(--hf-ink-3)" }}>
+          {amount}
+        </span>
+      </div>
+      <div style={{ display: "grid", placeItems: "center" }}>
+        <span
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            background: "var(--hf-green-bg)",
+            color: "var(--hf-green)",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 10,
+            fontWeight: 700,
+          }}
+        >
+          ✓
+        </span>
+      </div>
+      <div style={{ fontFamily: mono, fontSize: 11, color: "var(--hf-ink-3)" }}>received {received}</div>
     </div>
-    <div style={{ background: "var(--hf-window-content)", padding: "26px 28px" }}>
-      <p style={{ fontSize: 16, lineHeight: 1.6, color: "var(--hf-ink)", margin: 0 }}>
-        Shopify created <strong>4,312</strong> orders this week.
-        <br />
-        Webhooks fired for <strong>4,297</strong>.
-      </p>
-      <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--hf-ink-2)", margin: "12px 0 0" }}>
-        Here are the{" "}
-        <span style={{ color: "var(--hf-accent)", fontWeight: 600 }}>15 it never told you about</span>{" "}
-        — worth <strong>$2,840</strong>.
-      </p>
+  );
+}
+
+function GapRow({ id, amount, recoveredAt }: { id: string; amount: string; recoveredAt: string }) {
+  return (
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 44px 1fr",
+        alignItems: "center",
+        padding: "11px 18px",
+        borderBottom: "1px solid var(--hf-line-soft)",
+        background: "var(--hf-warm-bg)",
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+        <span style={{ fontFamily: mono, fontSize: 12, fontWeight: 500 }}>{id}</span>
+        <span className="hf-num" style={{ fontFamily: mono, fontSize: 11.5, color: "var(--hf-accent-warm)", fontWeight: 600 }}>
+          {amount}
+        </span>
+      </div>
+      <div style={{ display: "grid", placeItems: "center" }}>
+        <span
+          style={{
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            background: "var(--hf-warm-bg)",
+            color: "var(--hf-accent-warm)",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 10.5,
+            fontWeight: 700,
+          }}
+        >
+          !
+        </span>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 5, alignItems: "flex-start" }}>
+        <div style={{ fontFamily: mono, fontSize: 11, color: "var(--hf-warm)" }}>— never delivered</div>
+        <div
+          style={{
+            fontFamily: mono,
+            fontSize: 9.5,
+            fontWeight: 600,
+            color: "var(--hf-accent)",
+            background: "var(--hf-accent-soft)",
+            border: "1px solid var(--hf-accent-border)",
+            borderRadius: 999,
+            padding: "2px 9px",
+          }}
+        >
+          ↻ recovered {recoveredAt} · source: reconciliation
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const DiffLedger = () => (
+  <div style={{ position: "relative" }}>
+    <div
+      style={{
+        position: "absolute",
+        inset: "-56px -48px -64px",
+        background:
+          "radial-gradient(58% 55% at 72% 24%, rgba(56,189,248,0.20) 0%, transparent 70%), radial-gradient(45% 45% at 12% 88%, rgba(221,80,8,0.07) 0%, transparent 70%)",
+        pointerEvents: "none",
+      }}
+    />
+
+    <div
+      style={{
+        position: "relative",
+        border: "1px solid var(--hf-line)",
+        borderRadius: 14,
+        background: "var(--hf-bg-3)",
+        overflow: "hidden",
+        boxShadow:
+          "0 1px 2px rgba(14,17,22,0.05), 0 12px 28px -16px rgba(3,105,161,0.18), 0 32px 72px -32px rgba(14,17,22,0.22)",
+      }}
+    >
+      {/* card header */}
       <div
         style={{
-          marginTop: 22,
-          borderTop: "1px solid var(--hf-line)",
-          paddingTop: 14,
-          fontFamily: "var(--font-jetbrains-mono), monospace",
-          fontSize: 11.5,
-          color: "var(--hf-ink-2)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "12px 18px",
+          borderBottom: "1px solid var(--hf-line-soft)",
+          background: "var(--hf-bg-2)",
         }}
       >
-        {[
-          ["#4297", "orders/create", "never delivered", "$312.00"],
-          ["#4288", "orders/create", "never delivered", "$184.50"],
-          ["#4251", "orders/paid", "never delivered", "$96.00"],
-        ].map(([id, type, status, amt]) => (
-          <div
-            key={id}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "52px 1fr auto auto",
-              gap: 12,
-              padding: "7px 0",
-              borderBottom: "1px solid var(--hf-line)",
-            }}
-          >
-            <span style={{ color: "var(--hf-ink-4)" }}>{id}</span>
-            <span>{type}</span>
-            <span style={{ color: "var(--hf-ink-3)" }}>{status}</span>
-            <span style={{ color: "var(--hf-ink)" }}>{amt}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <span className="hw-pulse-sky" style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--hf-accent)" }} />
+          <div style={{ fontFamily: mono, fontSize: 11, fontWeight: 500, color: "var(--hf-ink)" }}>
+            brightloom.myshopify.com
           </div>
-        ))}
-        <div style={{ padding: "10px 0 0", color: "var(--hf-ink-4)" }}>
-          + 12 more · subscription-health findings included
         </div>
+        <div
+          style={{
+            fontFamily: mono,
+            fontSize: 10,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "var(--hf-ink-4)",
+          }}
+        >
+          live reconciliation
+        </div>
+      </div>
+
+      {/* column heads */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 44px 1fr",
+          alignItems: "center",
+          padding: "10px 18px 8px",
+          borderBottom: "1px solid var(--hf-bg-4)",
+        }}
+      >
+        <div
+          style={{
+            fontFamily: mono,
+            fontSize: 9.5,
+            fontWeight: 600,
+            letterSpacing: "0.09em",
+            textTransform: "uppercase",
+            color: "var(--hf-accent)",
+          }}
+        >
+          Admin API · truth
+        </div>
+        <div />
+        <div
+          style={{
+            fontFamily: mono,
+            fontSize: 9.5,
+            fontWeight: 600,
+            letterSpacing: "0.09em",
+            textTransform: "uppercase",
+            color: "var(--hf-ink-4)",
+          }}
+        >
+          Your endpoint
+        </div>
+      </div>
+
+      <OkRow id="#45-2379" amount="$74.00" received="09:11:42" />
+      <GapRow id="#45-2381" amount="$214.50" recoveredAt="09:18:02" />
+      <OkRow id="#45-2383" amount="$129.95" received="09:13:08" />
+      <GapRow id="#45-2386" amount="$89.00" recoveredAt="09:18:02" />
+      <OkRow id="#45-2390" amount="$56.20" received="09:16:51" last />
+
+      {/* footer */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: "11px 18px",
+          background: "var(--hf-bg-2)",
+          borderTop: "1px solid var(--hf-line-soft)",
+        }}
+      >
+        <div style={{ fontFamily: mono, fontSize: 10, color: "var(--hf-ink-4)" }}>
+          diff by provider_event_id · polled every 5 min
+        </div>
+        <div style={{ fontSize: 12.5, fontWeight: 600, color: "var(--hf-accent)" }}>
+          2 gaps · <span className="hf-num" style={{ color: "var(--hf-accent-warm)" }}>$303.50</span> recovered
+        </div>
+      </div>
+    </div>
+
+    {/* floating recovered badge */}
+    <div
+      style={{
+        position: "absolute",
+        right: -18,
+        bottom: -26,
+        background: "var(--hf-bg-3)",
+        border: "1px solid var(--hf-line)",
+        borderRadius: 12,
+        padding: "12px 16px",
+        boxShadow: "0 1px 2px rgba(14,17,22,0.05), 0 16px 40px -16px rgba(14,17,22,0.25)",
+      }}
+    >
+      <div
+        style={{
+          fontFamily: mono,
+          fontSize: 9,
+          fontWeight: 600,
+          letterSpacing: "0.09em",
+          textTransform: "uppercase",
+          color: "var(--hf-ink-4)",
+          marginBottom: 4,
+        }}
+      >
+        Recovered this week
+      </div>
+      <div className="hf-num" style={{ fontSize: 18, fontWeight: 650, letterSpacing: "-0.02em", color: "var(--hf-accent-warm)" }}>
+        $1,127.40
       </div>
     </div>
   </div>
@@ -132,466 +302,270 @@ const SampleReport = () => (
 
 /* ════════════════ Hero ════════════════ */
 const Hero = () => (
-  <div style={{ padding: "40px 28px 0" }}>
-    <div className="hf-container">
+  <div
+    style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1.08fr",
+      gap: 64,
+      alignItems: "center",
+      padding: "84px 64px 88px",
+      maxWidth: 1280,
+      margin: "0 auto",
+    }}
+  >
+    <div>
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "1.05fr 1fr",
-          gap: 56,
-          alignItems: "center",
-          minHeight: 520,
+          fontFamily: mono,
+          fontSize: 11,
+          fontWeight: 500,
+          letterSpacing: "0.12em",
+          textTransform: "uppercase",
+          color: "var(--hf-accent)",
+          marginBottom: 22,
         }}
       >
-        <div style={{ paddingTop: 40 }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "5px 12px",
-              borderRadius: 999,
-              border: "1px solid var(--hf-line)",
-              background: "var(--hf-bg-3)",
-              fontSize: 12,
-              color: "var(--hf-ink-2)",
-              marginBottom: 28,
-            }}
-          >
-            <span style={{ width: 6, height: 6, borderRadius: 999, background: "var(--hf-accent)" }} />
-            <span>Webhook reconciliation for Shopify stores</span>
-          </div>
-          <h1 className="hf-display" style={{ fontSize: 50, margin: 0, lineHeight: 1.07 }}>
-            We find the orders Shopify{" "}
-            <span className="hf-serif" style={{ color: "var(--hf-accent)" }}>
-              never told you about
-            </span>
-            .
-          </h1>
-          <p style={{ marginTop: 22, fontSize: 16, lineHeight: 1.6, color: "var(--hf-ink-2)", maxWidth: 500 }}>
-            Shopify&apos;s own docs say webhook delivery &ldquo;isn&apos;t always guaranteed&rdquo; — and tell you
-            to build reconciliation yourself. We are that, as a service: for 7 days we record what Shopify
-            actually fires, poll the Admin API for what actually happened, and hand you the diff — in dollars.
-          </p>
-          <div style={{ marginTop: 32 }}>
-            <Link href={CTA_HREF} className="hf-btn pill">
-              {CTA_LABEL}
-            </Link>
-          </div>
-          <p className="hf-mono" style={{ marginTop: 16, fontSize: 11.5, color: "var(--hf-ink-3)" }}>
-            Read-only API key · zero infra change · never in your critical path
-          </p>
-        </div>
-
-        <div className="hf-landscape" style={{ padding: 28, display: "flex", alignItems: "center" }}>
-          <SampleReport />
-        </div>
+        Shopify · Free 7-day gap audit
       </div>
-    </div>
-  </div>
-);
-
-/* ════════════════ Evidence ════════════════ */
-const EvidenceSection = () => {
-  const items = [
-    {
-      src: "Shopify docs",
-      quote:
-        "Webhook delivery “isn’t always guaranteed” — apps are told to build their own reconciliation jobs.",
-    },
-    {
-      src: "Dec 2025 · Shopify dev forums",
-      quote:
-        "A 5-year-stable app lost ~10% of orders/create webhooks for a week. The dashboard logs didn’t show it.",
-    },
-    {
-      src: "Feb 2026 · Shopify dev forums",
-      quote:
-        "~1,400 delivered orders in Admin vs ~400–500 fulfillment webhooks received.",
-    },
-    {
-      src: "Shopify retry policy",
-      quote:
-        "Events are dropped permanently after 8 retries over ~4 hours — and failing subscriptions are removed silently.",
-    },
-  ];
-  return (
-    <div id="evidence" className="hf-section" style={{ paddingTop: 80 }}>
-      <div className="hf-container">
-        <div style={{ textAlign: "center", maxWidth: 660, margin: "0 auto 36px" }}>
-          <span className="hf-eyebrow">The problem · documented</span>
-          <h2 className="hf-display" style={{ fontSize: 38, margin: "14px 0 0" }}>
-            Delivery is best-effort.
-            <br />
-            The failure is{" "}
-            <span className="hf-serif" style={{ color: "var(--hf-accent)" }}>
-              silent
-            </span>
-            .
-          </h2>
-          <p className="hf-kicker" style={{ marginTop: 14 }}>
-            Low-frequency, bursty, and correlated with the moments that matter most — flash sales,
-            deploys, platform bugs. You don&apos;t notice until a customer asks where their order went.
-          </p>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 14 }}>
-          {items.map((e) => (
-            <div
-              key={e.src}
-              style={{
-                background: "var(--hf-bg-3)",
-                border: "1px solid var(--hf-line)",
-                borderRadius: 14,
-                padding: "22px 24px",
-              }}
-            >
-              <div
-                className="hf-mono"
-                style={{
-                  fontSize: 10.5,
-                  color: "var(--hf-accent)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  marginBottom: 10,
-                }}
-              >
-                {e.src}
-              </div>
-              <p style={{ fontSize: 14.5, lineHeight: 1.6, color: "var(--hf-ink)", margin: 0 }}>{e.quote}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ════════════════ How it works ════════════════ */
-const HowSection = () => {
-  const steps = [
-    {
-      n: "01",
-      title: "Install in minutes",
-      body:
-        "A read-only Admin API key and one additional webhook subscription pointed at us. Shopify allows multiple subscriptions per topic — your existing flow is untouched, and we are never in the critical path.",
-    },
-    {
-      n: "02",
-      title: "7 days of recording",
-      body:
-        "We record every webhook Shopify actually fires and poll the Admin API every 5 minutes for ground truth. Events inside Shopify's documented latency window are never flagged — when in doubt, a gap is labeled unconfirmed, not lost.",
-    },
-    {
-      n: "03",
-      title: "The Gap Report",
-      body:
-        "What Shopify created vs what it told you about — each missing event priced in dollars, plus subscription-health findings: degraded endpoints, removal risk, API-version warnings. White-label it and send it to merchants under your own brand.",
-    },
-  ];
-  return (
-    <div id="how" className="hf-section">
-      <div className="hf-container">
-        <div className="hf-landscape" style={{ padding: "48px 48px 56px" }}>
-          <div style={{ maxWidth: 560, marginBottom: 36 }}>
-            <span className="hf-eyebrow">How it works</span>
-            <h2 className="hf-display" style={{ fontSize: 36, margin: "12px 0 0" }}>
-              Subscribe. Poll.{" "}
-              <span className="hf-serif" style={{ color: "var(--hf-accent)" }}>
-                Diff
-              </span>
-              .
-            </h2>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
-            {steps.map((s) => (
-              <div
-                key={s.n}
-                style={{
-                  background: "var(--hf-bg-3)",
-                  border: "1px solid var(--hf-line)",
-                  borderRadius: 12,
-                  padding: "22px 22px 24px",
-                }}
-              >
-                <div
-                  className="hf-mono"
-                  style={{ fontSize: 11, color: "var(--hf-accent)", marginBottom: 12 }}
-                >
-                  {s.n}
-                </div>
-                <div style={{ fontSize: 16, fontWeight: 500, color: "var(--hf-ink)", marginBottom: 8 }}>
-                  {s.title}
-                </div>
-                <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--hf-ink-2)", margin: 0 }}>{s.body}</p>
-              </div>
-            ))}
-          </div>
-          <div
-            className="hf-mono"
-            style={{
-              marginTop: 24,
-              paddingTop: 18,
-              borderTop: "1px solid var(--hf-line)",
-              fontSize: 11.5,
-              color: "var(--hf-ink-3)",
-            }}
-          >
-            SUBSCRIBE (additional, non-invasive) → RECORD → POLL ground truth every 5 min → DIFF → REPORT in dollars
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ════════════════ Not a proxy ════════════════ */
-const PositioningSection = () => (
-  <div className="hf-section">
-    <div className="hf-container">
-      <div
+      <h1
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 48,
-          alignItems: "center",
-          background: "var(--hf-bg-3)",
-          border: "1px solid var(--hf-line)",
-          borderRadius: 16,
-          padding: "44px 48px",
+          margin: "0 0 20px",
+          fontSize: 50,
+          fontWeight: 600,
+          letterSpacing: "-0.03em",
+          lineHeight: 1.06,
+          textWrap: "balance",
         }}
       >
-        <div>
-          <span className="hf-eyebrow">Why your proxy can&apos;t see this</span>
-          <h2 className="hf-display" style={{ fontSize: 32, margin: "14px 0 0" }}>
-            Proxies protect events the provider{" "}
-            <span className="hf-serif" style={{ color: "var(--hf-accent)" }}>
-              actually sent
-            </span>
-            .
-          </h2>
-          <p style={{ marginTop: 16, fontSize: 14.5, lineHeight: 1.65, color: "var(--hf-ink-2)" }}>
-            Gateways like Hookdeck and Svix sit in the delivery path — if Shopify never fires the
-            webhook, there is nothing for them to protect. We sit against the provider&apos;s API truth and
-            catch what was never delivered at all. Different layer, different job: we work alongside
-            them, not against them.
-          </p>
-        </div>
-        <div
-          className="hf-mono"
-          style={{ fontSize: 12, lineHeight: 2, color: "var(--hf-ink-2)" }}
-        >
-          <div style={{ color: "var(--hf-ink-4)" }}>{"// delivery gateway"}</div>
-          <div>provider → proxy → your endpoint</div>
-          <div style={{ color: "var(--hf-ink-4)", marginTop: 12 }}>{"// delivery insurance (us)"}</div>
-          <div>
-            provider API <span style={{ color: "var(--hf-accent)" }}>⟲ polled</span> ⇄ diff ⇄ webhooks received
-          </div>
-          <div style={{ marginTop: 12, color: "var(--hf-ink-3)" }}>
-            gap found → recovered, tagged <span style={{ color: "var(--hf-accent)" }}>source: reconciliation</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-/* ════════════════ Pricing ════════════════ */
-const PricingSection = () => (
-  <div id="pricing" className="hf-section">
-    <div className="hf-container">
-      <div style={{ textAlign: "center", maxWidth: 580, margin: "0 auto 40px" }}>
-        <span className="hf-eyebrow">Pricing</span>
-        <h2 className="hf-display" style={{ fontSize: 36, margin: "14px 0 0" }}>
-          The audit is free.
-          <br />
-          Staying covered is{" "}
-          <span className="hf-serif" style={{ color: "var(--hf-accent)" }}>
-            $29 a store
-          </span>
-          .
-        </h2>
-        <p className="hf-kicker" style={{ marginTop: 14 }}>
-          Shopify&apos;s recommended alternative is building reconciliation yourself: 2–3 weeks of
-          engineering, then maintaining it forever.
-        </p>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, maxWidth: 820, margin: "0 auto" }}>
-        <div
-          style={{
-            background: "rgba(255,255,255,0.015)",
-            border: "1px solid var(--hf-line)",
-            borderRadius: 16,
-            padding: "28px 28px 24px",
-          }}
-        >
-          <div
-            className="hf-mono"
-            style={{ fontSize: 11, color: "var(--hf-ink-3)", textTransform: "uppercase", letterSpacing: "0.08em" }}
-          >
-            7-Day Gap Audit
-          </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginTop: 8 }}>
-            <span className="hf-num" style={{ fontSize: 44, fontWeight: 500, letterSpacing: "-0.035em", color: "var(--hf-ink)", lineHeight: 1 }}>
-              $0
-            </span>
-          </div>
-          <ul style={{ listStyle: "none", padding: 0, margin: "20px 0 0", display: "flex", flexDirection: "column", gap: 9 }}>
-            {[
-              "Full 7-day reconciliation against the Admin API",
-              "Gap Report with dollar values per missing event",
-              "Subscription-health findings",
-              "White-label option for agencies",
-              "Shareable report link — no login needed",
-            ].map((f) => (
-              <li key={f} style={{ display: "grid", gridTemplateColumns: "16px 1fr", gap: 8, fontSize: 12.5, color: "var(--hf-ink-2)", lineHeight: 1.45 }}>
-                <span style={{ color: "var(--hf-accent)" }}>✓</span>
-                <span>{f}</span>
-              </li>
-            ))}
-          </ul>
-          <Link href={CTA_HREF} className="hf-btn pill" style={{ marginTop: 22, width: "100%", justifyContent: "center", display: "inline-flex" }}>
-            Run the free audit →
-          </Link>
-        </div>
-
-        <div
-          style={{
-            background: "var(--hf-bg-3)",
-            border: "1px solid var(--hf-line-2)",
-            borderRadius: 16,
-            padding: "28px 28px 24px",
-          }}
-        >
-          <div
-            className="hf-mono"
-            style={{ fontSize: 11, color: "var(--hf-ink-3)", textTransform: "uppercase", letterSpacing: "0.08em" }}
-          >
-            Continuous Revenue Assurance
-          </div>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginTop: 8 }}>
-            <span className="hf-num" style={{ fontSize: 44, fontWeight: 500, letterSpacing: "-0.035em", color: "var(--hf-ink)", lineHeight: 1 }}>
-              $29
-            </span>
-            <span style={{ color: "var(--hf-ink-3)", fontSize: 14 }}>/store/mo</span>
-          </div>
-          <ul style={{ listStyle: "none", padding: 0, margin: "20px 0 0", display: "flex", flexDirection: "column", gap: 9 }}>
-            {[
-              "Reconciliation poll every 5 minutes, forever",
-              "Gaps auto-recovered and delivered to your endpoint, tagged source: reconciliation",
-              "Idempotent by provider event ID — safe alongside your existing webhooks",
-              "Alerts before Shopify silently removes a degraded subscription",
-              "Monthly revenue-assured statement",
-              "~$19/store at 10+ stores for agencies",
-            ].map((f) => (
-              <li key={f} style={{ display: "grid", gridTemplateColumns: "16px 1fr", gap: 8, fontSize: 12.5, color: "var(--hf-ink-2)", lineHeight: 1.45 }}>
-                <span style={{ color: "var(--hf-accent)" }}>✓</span>
-                <span>{f}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="hf-mono" style={{ marginTop: 22, fontSize: 11, color: "var(--hf-ink-4)" }}>
-            Starts after your audit — only if it found something worth protecting.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-/* ════════════════ Honesty note ════════════════ */
-const HonestySection = () => (
-  <div className="hf-section" style={{ paddingTop: 20 }}>
-    <div className="hf-container" style={{ maxWidth: 720 }}>
-      <div
-        style={{
-          border: "1px solid var(--hf-line)",
-          borderRadius: 14,
-          padding: "24px 28px",
-          background: "rgba(255,255,255,0.015)",
-        }}
-      >
-        <div
-          className="hf-mono"
-          style={{ fontSize: 10.5, color: "var(--hf-accent)", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10 }}
-        >
-          What if the audit finds nothing?
-        </div>
-        <p style={{ fontSize: 14, lineHeight: 1.65, color: "var(--hf-ink-2)", margin: 0 }}>
-          Then you get a clean report proving your delivery is healthy — free, with the data to show
-          for it. Gap loss is bursty: stores run clean for months, then a flash sale or a platform bug
-          eats a week of orders. That&apos;s why the paid product exists; it&apos;s insurance, and the audit
-          shows you your actual premium-vs-risk math instead of a hypothetical.
-        </p>
-      </div>
-    </div>
-  </div>
-);
-
-/* ════════════════ Final CTA ════════════════ */
-const FinalCta = () => (
-  <div className="hf-section-lg" style={{ textAlign: "center" }}>
-    <div className="hf-container">
-      <h2 className="hf-final">
-        Audit before you{" "}
-        <span className="hf-serif" style={{ color: "var(--hf-accent)" }}>
-          trust
-        </span>
-        .
-      </h2>
-      <div style={{ marginTop: 36, display: "flex", justifyContent: "center" }}>
-        <Link href={CTA_HREF} className="hf-btn pill">
-          {CTA_LABEL}
+        Your store had 4,312 orders. Your webhooks say 4,297.
+      </h1>
+      <p style={{ margin: "0 0 32px", fontSize: 16.5, lineHeight: 1.55, color: "var(--hf-ink-2)", maxWidth: 480, textWrap: "pretty" }}>
+        Shopify drops webhooks — their own docs tell you to build reconciliation. We are that, as a
+        service: we diff what was fired against what actually happened, and recover the rest.
+      </p>
+      <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
+        <Link href={CTA_HREF} className="hf-btn pill" style={{ fontSize: 14.5, padding: "12px 22px", borderRadius: 9 }}>
+          Run a free 7-day gap audit
+        </Link>
+        <Link href={CTA_HREF} style={{ color: "var(--hf-accent)", fontSize: 14, fontWeight: 500, textDecoration: "none" }}>
+          See a sample report →
         </Link>
       </div>
-      <div className="hf-mono" style={{ marginTop: 18, fontSize: 12.5, color: "var(--hf-ink-3)" }}>
-        read-only key · 7 days · report in dollars · free
+      <div
+        style={{
+          fontFamily: mono,
+          fontSize: 10.5,
+          letterSpacing: "0.07em",
+          textTransform: "uppercase",
+          color: "var(--hf-ink-4)",
+          marginTop: 24,
+        }}
+      >
+        Read-only · zero infra change · never in your critical path
       </div>
+    </div>
+
+    <DiffLedger />
+  </div>
+);
+
+/* ════════════════ Evidence band ════════════════ */
+const EVIDENCE = [
+  {
+    quote: "Delivery “isn’t always guaranteed.” Their docs tell you to build reconciliation yourself.",
+    src: "shopify.dev docs",
+  },
+  {
+    quote: "~10% of orders/create missing for a week — on a five-year-stable app. Logs showed nothing.",
+    src: "community forums · dec 2025",
+  },
+  {
+    quote: "8 retries over ~4 hours, then the event is gone. Failing subscriptions are removed silently.",
+    src: "delivery policy",
+  },
+];
+
+const EvidenceBand = () => (
+  <div id="evidence" style={{ borderTop: "1px solid var(--hf-line-soft)", borderBottom: "1px solid var(--hf-line-soft)", background: "var(--hf-bg-2)" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", maxWidth: 1280, margin: "0 auto" }}>
+      {EVIDENCE.map((e, i) => (
+        <div key={e.src} style={{ padding: "28px 32px", borderRight: i < 2 ? "1px solid var(--hf-line-soft)" : "none" }}>
+          <p style={{ margin: "0 0 8px", fontSize: 14, lineHeight: 1.5, color: "var(--hf-ink)" }}>{e.quote}</p>
+          <div
+            style={{
+              fontFamily: mono,
+              fontSize: 10,
+              letterSpacing: "0.07em",
+              textTransform: "uppercase",
+              color: "var(--hf-ink-4)",
+            }}
+          >
+            {e.src}
+          </div>
+        </div>
+      ))}
     </div>
   </div>
 );
 
-/* ════════════════ Footer ════════════════ */
-const Footer = () => (
-  <div className="hf-footer">
-    <div className="hf-footer-grid hf-footer-3col">
-      <div>
-        <HFLogo />
-        <p style={{ fontSize: 13, color: "var(--hf-ink-3)", marginTop: 14, maxWidth: 300, lineHeight: 1.55 }}>
-          Continuous webhook reconciliation. We find what your provider never delivered — and recover it.
+/* ════════════════ How it works ════════════════ */
+const STEPS: Array<{ n: string; title: string; body: React.ReactNode; active?: boolean }> = [
+  {
+    n: "01 — Subscribe",
+    title: "",
+    body: "An additional webhook subscription. Shopify allows multiple per topic — yours is untouched.",
+    active: true,
+  },
+  {
+    n: "02 — Record",
+    title: "",
+    body: "We log every webhook Shopify actually fires, keyed by provider event ID.",
+  },
+  {
+    n: "03 — Poll",
+    title: "",
+    body: "A read-only poll of your Admin API every 5 minutes establishes ground truth.",
+  },
+  {
+    n: "04 — Diff & recover",
+    title: "",
+    body: (
+      <>
+        Gaps are re-delivered, idempotent and tagged{" "}
+        <span style={{ fontFamily: mono, fontSize: 12 }}>source: &#39;reconciliation&#39;</span>.
+      </>
+    ),
+  },
+];
+
+const HowSection = () => (
+  <div id="how" style={{ padding: "80px 64px 64px", maxWidth: 1280, margin: "0 auto" }}>
+    <h2 style={{ margin: "0 0 36px", fontSize: 30, fontWeight: 600, letterSpacing: "-0.025em" }}>
+      Four steps. None of them touch your existing flow.
+    </h2>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 28 }}>
+      {STEPS.map((s) => (
+        <div key={s.n} style={{ borderTop: `2px solid ${s.active ? "var(--hf-accent)" : "var(--hf-line-2)"}`, paddingTop: 16 }}>
+          <div
+            style={{
+              fontFamily: mono,
+              fontSize: 11,
+              fontWeight: 600,
+              color: s.active ? "var(--hf-accent)" : "var(--hf-ink)",
+              marginBottom: 8,
+            }}
+          >
+            {s.n}
+          </div>
+          <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: "var(--hf-ink-2)" }}>{s.body}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+/* ════════════════ Pricing band ════════════════ */
+const PricingBand = () => (
+  <div id="pricing" style={{ maxWidth: 1280, margin: "0 auto" }}>
+    <div
+      style={{
+        margin: "0 64px",
+        border: "1px solid var(--hf-line)",
+        borderRadius: 14,
+        overflow: "hidden",
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+      }}
+    >
+      <div style={{ padding: "36px 40px", borderRight: "1px solid var(--hf-line-soft)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+          <div style={{ fontSize: 16, fontWeight: 600 }}>7-Day Gap Audit</div>
+          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em" }}>Free</div>
+        </div>
+        <p style={{ margin: "0 0 20px", fontSize: 13.5, lineHeight: 1.55, color: "var(--hf-ink-2)" }}>
+          Every missed event on your store, in dollars. Subscription-health findings included.
+          White-label for agencies.
         </p>
+        <Link
+          href={CTA_HREF}
+          style={{
+            display: "inline-block",
+            border: "1px solid var(--hf-line-2)",
+            color: "var(--hf-ink)",
+            fontSize: 13.5,
+            fontWeight: 550,
+            padding: "9px 18px",
+            borderRadius: 8,
+            textDecoration: "none",
+          }}
+        >
+          Run free audit
+        </Link>
       </div>
-      <div>
-        <div className="hf-footer-head">Product</div>
-        <ul>
-          <li>
-            <Link href={CTA_HREF}>Free Gap Audit</Link>
-          </li>
-          <li>
-            <Link href="#pricing">Pricing</Link>
-          </li>
-          <li>
-            <Link href="/status">Status</Link>
-          </li>
-        </ul>
-      </div>
-      <div>
-        <div className="hf-footer-head">Company</div>
-        <ul>
-          <li>
-            <Link href="/login">Sign in</Link>
-          </li>
-          <li>
-            <a href="mailto:hello@hookwise.dev">Contact</a>
-          </li>
-        </ul>
+      <div style={{ padding: "36px 40px", background: "var(--hf-accent-tint)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 }}>
+          <div style={{ fontSize: 16, fontWeight: 600 }}>Revenue Assurance</div>
+          <div style={{ fontSize: 22, fontWeight: 600, letterSpacing: "-0.02em" }}>
+            $29
+            <span style={{ fontSize: 12.5, color: "var(--hf-ink-4)", fontWeight: 450 }}> /store/mo</span>
+          </div>
+        </div>
+        <p style={{ margin: "0 0 20px", fontSize: 13.5, lineHeight: 1.55, color: "var(--hf-ink-2)" }}>
+          Continuous 5-minute reconciliation, automatic recovery, degraded-subscription alerts,
+          monthly statement. $19/store at 10+.
+        </p>
+        <Link href={CTA_HREF} className="hf-btn pill" style={{ fontSize: 13.5 }}>
+          Start monitoring
+        </Link>
       </div>
     </div>
-    <div className="hf-footer-bottom">
-      <span>© 2026 HookWise</span>
-      <ThemeToggleFooter />
-      <span className="hf-mono">works alongside Hookdeck &amp; Svix — different layer</span>
+    <div style={{ fontFamily: mono, fontSize: 11, color: "var(--hf-ink-4)", textAlign: "center", padding: "16px 0 0" }}>
+      vs. DIY per Shopify&#39;s docs: 2–3 weeks of engineering + maintenance, forever
+    </div>
+  </div>
+);
+
+/* ════════════════ Final CTA + footer ════════════════ */
+const FinalCta = () => (
+  <div style={{ textAlign: "center", padding: "88px 64px 56px", maxWidth: 1280, margin: "0 auto" }}>
+    <div
+      style={{
+        fontSize: 48,
+        fontWeight: 600,
+        letterSpacing: "-0.032em",
+        lineHeight: 1.1,
+        marginBottom: 28,
+        textWrap: "balance",
+      }}
+    >
+      Run the audit. Read the receipts.
+    </div>
+    <Link href={CTA_HREF} className="hf-btn pill" style={{ fontSize: 14.5, padding: "12px 24px", borderRadius: 9 }}>
+      Run a free 7-day gap audit
+    </Link>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginTop: 72,
+        paddingTop: 18,
+        borderTop: "1px solid var(--hf-line-soft)",
+        fontSize: 12,
+        color: "var(--hf-ink-4)",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <LogoMark size={16} />© 2026 trueline
+      </div>
+      <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
+        <span>Privacy</span>
+        <span>Security</span>
+        <Link href="/status" style={{ color: "inherit", textDecoration: "none" }}>
+          Status
+        </Link>
+        <ThemeToggleFooter />
+      </div>
     </div>
   </div>
 );
@@ -599,16 +573,22 @@ const Footer = () => (
 /* ════════════════ Page ════════════════ */
 export default function LandingPage() {
   return (
-    <div className="hf-root">
-      <HFNav />
+    <div
+      style={{
+        background: "var(--background)",
+        color: "var(--hf-ink)",
+        letterSpacing: "-0.011em",
+        minHeight: "100vh",
+        fontFamily: "var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif",
+        WebkitFontSmoothing: "antialiased",
+      }}
+    >
+      <Nav />
       <Hero />
-      <EvidenceSection />
+      <EvidenceBand />
       <HowSection />
-      <PositioningSection />
-      <PricingSection />
-      <HonestySection />
+      <PricingBand />
       <FinalCta />
-      <Footer />
     </div>
   );
 }

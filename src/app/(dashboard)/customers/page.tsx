@@ -25,7 +25,7 @@ export default function CustomersPage() {
               across providers.
             </>
           }
-          sub="HookWise will resolve each customer's identity across Stripe, Shopify, Clerk, and Resend — even when IDs don't match — so you see one unified timeline per person. Shipping next sprint."
+          sub="Trueline will resolve each customer's identity across Stripe, Shopify, Clerk, and Resend — even when IDs don't match — so you see one unified timeline per person. Shipping next sprint."
         />
 
         <div
@@ -48,8 +48,8 @@ export default function CustomersPage() {
             label="LTV TRACKED"
             value="—"
             sub="across all integrations"
-            color="#7ed98a"
-            accent="#7ed98a"
+            color="#16a34a"
+            accent="#16a34a"
           />
           <StatTile label="EVENTS / CUSTOMER" value="—" sub="median" />
         </div>

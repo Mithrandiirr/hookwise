@@ -158,7 +158,7 @@ export function StatusClient({ initialData }: { initialData: StatusData }) {
           className="hw-display"
           style={{ marginTop: 12, fontSize: 32, color: "var(--hw-ink)" }}
         >
-          HookWise network status
+          Trueline network status
         </h1>
         <p
           style={{
@@ -167,7 +167,7 @@ export function StatusClient({ initialData }: { initialData: StatusData }) {
             color: "var(--hw-ink-3)",
           }}
         >
-          Real-time webhook provider health across the HookWise network.
+          Real-time webhook provider health across the Trueline network.
         </p>
       </div>
 
@@ -179,16 +179,16 @@ export function StatusClient({ initialData }: { initialData: StatusData }) {
           gap: 14,
           borderColor:
             overallTone === "green"
-              ? "rgba(74,222,128,0.22)"
+              ? "#c4ebd2"
               : overallTone === "amber"
-                ? "rgba(251,191,36,0.22)"
-                : "rgba(248,113,113,0.22)",
+                ? "#f4c9ad"
+                : "#f4c4c4",
           background:
             overallTone === "green"
-              ? "rgba(74,222,128,0.04)"
+              ? "#e8f7ee"
               : overallTone === "amber"
-                ? "rgba(251,191,36,0.04)"
-                : "rgba(248,113,113,0.04)",
+                ? "#fdeada"
+                : "#fdeaea",
         }}
       >
         <Dot tone={overallTone} />
@@ -383,8 +383,8 @@ export function StatusClient({ initialData }: { initialData: StatusData }) {
             className="hw-panel flex items-center"
             style={{
               padding: "16px 22px",
-              background: "rgba(74,222,128,0.04)",
-              borderColor: "rgba(74,222,128,0.22)",
+              background: "#e8f7ee",
+              borderColor: "#c4ebd2",
               gap: 12,
             }}
           >

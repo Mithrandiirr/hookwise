@@ -99,9 +99,9 @@ export function AnomalyChat({ anomalyId }: { anomalyId: string }) {
             fontSize: 10,
             padding: "3px 8px",
             borderRadius: 999,
-            background: "rgba(196,165,255,0.12)",
-            color: "#c4a5ff",
-            border: "1px solid rgba(196,165,255,0.3)",
+            background: "#efeafb",
+            color: "#7c5cd6",
+            border: "1px solid #ddd0f5",
             letterSpacing: "0.08em",
             textTransform: "uppercase",
             fontWeight: 600,
@@ -214,8 +214,8 @@ export function AnomalyChat({ anomalyId }: { anomalyId: string }) {
             margin: "0 24px 16px",
             padding: "10px 14px",
             borderRadius: 10,
-            border: "1px solid rgba(242,154,154,0.3)",
-            background: "rgba(242,154,154,0.06)",
+            border: "1px solid #f4c4c4",
+            background: "#fdeaea",
             fontSize: 12.5,
             color: "var(--hf-ink-2)",
           }}
@@ -236,7 +236,7 @@ export function AnomalyChat({ anomalyId }: { anomalyId: string }) {
           display: "flex",
           alignItems: "flex-end",
           gap: 10,
-          background: "rgba(255,255,255,0.015)",
+          background: "#f1f2f5",
         }}
       >
         <textarea
@@ -301,14 +301,14 @@ function ChatBubble({ role, content }: { role: "user" | "assistant"; content: st
           height: 24,
           borderRadius: 6,
           marginTop: 1,
-          background: isUser ? "var(--hf-bg)" : "rgba(196,165,255,0.12)",
+          background: isUser ? "var(--hf-bg)" : "#efeafb",
           border: isUser
             ? "1px solid var(--hf-line)"
-            : "1px solid rgba(196,165,255,0.3)",
+            : "1px solid #ddd0f5",
           display: "grid",
           placeItems: "center",
           fontSize: 10.5,
-          color: isUser ? "var(--hf-ink-3)" : "#c4a5ff",
+          color: isUser ? "var(--hf-ink-3)" : "#7c5cd6",
           fontFamily: "var(--font-jetbrains-mono), monospace",
           fontWeight: 600,
         }}
@@ -347,12 +347,12 @@ function ThinkingDots() {
           height: 24,
           borderRadius: 6,
           marginTop: 1,
-          background: "rgba(196,165,255,0.12)",
-          border: "1px solid rgba(196,165,255,0.3)",
+          background: "#efeafb",
+          border: "1px solid #ddd0f5",
           display: "grid",
           placeItems: "center",
           fontSize: 10.5,
-          color: "#c4a5ff",
+          color: "#7c5cd6",
           fontFamily: "var(--font-jetbrains-mono), monospace",
           fontWeight: 600,
         }}
@@ -389,7 +389,7 @@ function Dot({ delay }: { delay: number }) {
         width: 5,
         height: 5,
         borderRadius: 999,
-        background: "#c4a5ff",
+        background: "#7c5cd6",
         animation: "hf-pulse 900ms ease-in-out infinite",
         animationDelay: `${delay}ms`,
       }}

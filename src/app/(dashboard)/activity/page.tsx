@@ -52,32 +52,32 @@ const ACTION: Record<AuditAction, Meta> = {
 };
 
 const TONE_FG: Record<Tone, string> = {
-  green: "#7ed98a",
-  amber: "#fbbf24",
-  red: "#f29a9a",
-  violet: "#c4a5ff",
+  green: "#16a34a",
+  amber: "#d97706",
+  red: "#dc2626",
+  violet: "#7c5cd6",
   ember: "var(--hf-accent)",
   ink: "var(--hf-ink-2)",
 };
 const TONE_BG: Record<Tone, string> = {
-  green: "rgba(126,217,138,0.10)",
-  amber: "rgba(251,191,36,0.10)",
-  red: "rgba(242,154,154,0.10)",
-  violet: "rgba(196,165,255,0.10)",
+  green: "#e8f7ee",
+  amber: "#fdeada",
+  red: "#fdeaea",
+  violet: "#efeafb",
   ember: "rgba(163,230,53,0.10)",
-  ink: "rgba(255,255,255,0.04)",
+  ink: "#f1f2f5",
 };
 
 type CategoryFilter = "all" | Meta["category"];
 
 const CATEGORIES: Array<[CategoryFilter, string, string | null]> = [
   ["all",         "All",          null],
-  ["delivery",    "Deliveries",   "#7ed98a"],
-  ["retry",       "Retries",      "#fbbf24"],
-  ["recon",       "Reconciler",   "#7ed98a"],
-  ["circuit",     "Circuit",      "#fbbf24"],
-  ["integration", "Integrations", "#c4a5ff"],
-  ["scan",        "Scans",        "#c4a5ff"],
+  ["delivery",    "Deliveries",   "#16a34a"],
+  ["retry",       "Retries",      "#d97706"],
+  ["recon",       "Reconciler",   "#16a34a"],
+  ["circuit",     "Circuit",      "#d97706"],
+  ["integration", "Integrations", "#7c5cd6"],
+  ["scan",        "Scans",        "#7c5cd6"],
 ];
 
 export default async function ActivityPage({
@@ -168,7 +168,7 @@ export default async function ActivityPage({
               .
             </>
           }
-          sub="A chronological log of every event HookWise handled, every retry it absorbed, every investigation it ran, and every action a teammate took — searchable and exportable."
+          sub="A chronological log of every event Trueline handled, every retry it absorbed, every investigation it ran, and every action a teammate took — searchable and exportable."
           actions={
             <>
               <button type="button" className="hf-btn outline small">Export CSV</button>
@@ -332,7 +332,7 @@ function Section({
               padding: "14px 24px",
               borderBottom:
                 i < rows.length - 1
-                  ? "1px solid rgba(255,255,255,0.03)"
+                  ? "1px solid #f1f2f5"
                   : "none",
               alignItems: "center",
             }}

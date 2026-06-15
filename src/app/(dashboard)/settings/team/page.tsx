@@ -1,4 +1,4 @@
-// Members surface — matches .design layout.
+﻿// Members surface — matches .design layout.
 // Production is single-user pre-multi-org migration; renders the calling user as
 // owner and the design's roles-and-permissions reference card.
 
@@ -116,12 +116,12 @@ export default async function MembersPage() {
                   width: 30,
                   height: 30,
                   borderRadius: 999,
-                  background: "linear-gradient(135deg, #a3e635, #4a7c1f)",
+                  background: "var(--hf-accent-soft)",
                   display: "grid",
                   placeItems: "center",
                   fontSize: 11,
                   fontWeight: 600,
-                  color: "#0a0a0a",
+                  color: "var(--hf-accent)",
                   flexShrink: 0,
                 }}
               >
@@ -238,7 +238,7 @@ export default async function MembersPage() {
                         alignItems: "center",
                       }}
                     >
-                      <span style={{ color: "#7ed98a", fontSize: 10 }}>✓</span>
+                      <span style={{ color: "#16a34a", fontSize: 10 }}>✓</span>
                       {p}
                     </li>
                   ))}

@@ -194,7 +194,7 @@ export default async function AnomalyDetailPage({
                 <Link
                   href={`/anomalies/${diagnosis.similarIncidents[0].anomalyId}`}
                   className="hf-mono"
-                  style={{ color: "#c4a5ff", textDecoration: "none" }}
+                  style={{ color: "#7c5cd6", textDecoration: "none" }}
                 >
                   {`INC-${diagnosis.similarIncidents[0].anomalyId.slice(0, 8).toUpperCase()}`}
                 </Link>{" "}
@@ -238,15 +238,15 @@ export default async function AnomalyDetailPage({
                 ? `↑ ${(failurePct / baselineFailurePct).toFixed(1)}× baseline`
                 : "vs baseline"
             }
-            color={failurePct && failurePct > 1 ? "#f29a9a" : "var(--hf-ink)"}
-            accent="#f29a9a"
+            color={failurePct && failurePct > 1 ? "#dc2626" : "var(--hf-ink)"}
+            accent="#dc2626"
           />
           <StatTile
             label="EVENTS AFFECTED"
             value={eventsAffected > 0 ? eventsAffected.toLocaleString() : "—"}
             sub={eventsAffected > 0 ? "queued · replay-eligible" : "—"}
-            color={eventsAffected > 0 ? "#fbbf24" : "var(--hf-ink)"}
-            accent="#fbbf24"
+            color={eventsAffected > 0 ? "#d97706" : "var(--hf-ink)"}
+            accent="#d97706"
           />
           <StatTile
             label="REVENUE AT RISK"
@@ -308,7 +308,7 @@ export default async function AnomalyDetailPage({
                   letterSpacing: "0.08em",
                 }}
               >
-                Root cause · HookWise AI
+                Root cause · Trueline AI
               </span>
               <span style={{ flex: 1 }} />
               {hasEvidence && (
@@ -361,7 +361,7 @@ export default async function AnomalyDetailPage({
                     {Math.round(baselineP95)}ms
                   </span>{" "}
                   →{" "}
-                  <span className="hf-mono" style={{ color: "#fbbf24" }}>
+                  <span className="hf-mono" style={{ color: "#d97706" }}>
                     {Math.round(currentP95)}ms
                   </span>{" "}
                   at detection time.
@@ -393,7 +393,7 @@ export default async function AnomalyDetailPage({
                     alignItems: "start",
                     borderBottom:
                       i < arr.length - 1
-                        ? "1px solid rgba(255,255,255,0.04)"
+                        ? "1px solid #f1f2f5"
                         : "none",
                   }}
                 >
@@ -418,7 +418,7 @@ export default async function AnomalyDetailPage({
                       className="hf-mono"
                       style={{
                         fontSize: 12.5,
-                        color: "#c4a5ff",
+                        color: "#7c5cd6",
                         letterSpacing: "0.02em",
                       }}
                     >
@@ -603,7 +603,7 @@ export default async function AnomalyDetailPage({
                       borderTop: i > 0 ? "1px solid var(--hf-line)" : "none",
                       borderBottom:
                         i < a.length - 1
-                          ? "1px solid rgba(255,255,255,0.03)"
+                          ? "1px solid #f1f2f5"
                           : "none",
                       textDecoration: "none",
                       color: "var(--hf-ink)",
@@ -695,7 +695,7 @@ function ContextRow({
         className="hf-mono hf-num"
         style={{
           fontSize: 13,
-          color: alarming ? "#f29a9a" : "var(--hf-ink)",
+          color: alarming ? "#dc2626" : "var(--hf-ink)",
           fontWeight: 500,
         }}
       >

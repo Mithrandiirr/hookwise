@@ -239,8 +239,8 @@ export function CreateFlowForm({
           style={{
             padding: "10px 14px",
             borderRadius: 8,
-            background: "rgba(248,113,113,0.06)",
-            border: "1px solid rgba(248,113,113,0.22)",
+            background: "#fdeaea",
+            border: "1px solid #f4c4c4",
             color: "var(--hw-red)",
             fontSize: 12,
           }}

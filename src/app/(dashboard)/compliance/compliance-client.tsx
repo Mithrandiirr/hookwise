@@ -261,9 +261,9 @@ export function ComplianceClient({
               style={{
                 width: "100%",
                 justifyContent: "center",
-                background: "rgba(74,222,128,0.1)",
+                background: "#e8f7ee",
                 color: "var(--hw-green)",
-                border: "1px solid rgba(74,222,128,0.25)",
+                border: "1px solid #c4ebd2",
                 opacity: verifying ? 0.6 : 1,
               }}
             >
@@ -277,11 +277,11 @@ export function ComplianceClient({
                   padding: "10px 14px",
                   borderRadius: 8,
                   background: verifyResult.valid
-                    ? "rgba(74,222,128,0.06)"
-                    : "rgba(248,113,113,0.06)",
+                    ? "#e8f7ee"
+                    : "#fdeaea",
                   border: verifyResult.valid
-                    ? "1px solid rgba(74,222,128,0.22)"
-                    : "1px solid rgba(248,113,113,0.22)",
+                    ? "1px solid #c4ebd2"
+                    : "1px solid #f4c4c4",
                   fontSize: 12,
                   color: verifyResult.valid
                     ? "var(--hw-green)"

@@ -193,12 +193,12 @@ export function Panel({
 export type PillTone = "green" | "amber" | "red" | "violet" | "ember" | "ink";
 
 const PILL_MAP: Record<PillTone, [string, string]> = {
-  green: ["rgba(126,217,138,0.10)", "#7ed98a"],
-  amber: ["rgba(251,191,36,0.10)", "#fbbf24"],
-  red: ["rgba(242,154,154,0.10)", "#f29a9a"],
-  violet: ["rgba(196,165,255,0.10)", "#c4a5ff"],
-  ember: ["rgba(163,230,53,0.12)", "var(--hf-accent)"],
-  ink: ["rgba(255,255,255,0.04)", "var(--hf-ink-2)"],
+  green: ["#e8f7ee", "#16a34a"],
+  amber: ["#fdeada", "#b35418"],
+  red: ["#fdeaea", "#dc2626"],
+  violet: ["#efeafb", "#7c5cd6"],
+  ember: ["#e8f4fb", "var(--hf-accent)"],
+  ink: ["#f1f2f5", "var(--hf-ink-2)"],
 };
 
 export function Pill({
@@ -240,11 +240,11 @@ export function Pill({
 /* ───────── ProviderTag (minimal, .design-style — colored square + mono name) ───────── */
 
 const PROVIDER_TAG_COLOR: Record<string, string> = {
-  stripe: "#f2b37a",
-  shopify: "#9ec396",
-  clerk: "#c4a5ff",
-  resend: "#e89f6b",
-  github: "#fbbf24",
+  stripe: "#635bff",
+  shopify: "#16a34a",
+  clerk: "#7c5cd6",
+  resend: "#b35418",
+  github: "#0e1116",
 };
 
 export function ProviderTag({ name }: { name: string }) {
@@ -264,6 +264,146 @@ export function ProviderTag({ name }: { name: string }) {
       {name}
     </span>
   );
+}
+
+/* ───────── Toggle (Daylight — inset track + drop-shadow knob) ───────── */
+
+export function Toggle({ on = false, size = "md" }: { on?: boolean; size?: "sm" | "md" }) {
+  const w = size === "sm" ? 33 : 36;
+  const h = size === "sm" ? 19 : 21;
+  const k = size === "sm" ? 15 : 17;
+  return (
+    <span
+      style={{
+        width: w,
+        height: h,
+        borderRadius: 999,
+        background: on ? "var(--hf-accent)" : "#ccd1d9",
+        boxShadow: on
+          ? "inset 0 1px 2px rgba(2,55,85,0.35)"
+          : "inset 0 1px 2px rgba(14,17,22,0.1)",
+        position: "relative",
+        display: "inline-block",
+        flexShrink: 0,
+      }}
+    >
+      <span
+        style={{
+          position: "absolute",
+          top: 2,
+          left: on ? w - k - 2 : 2,
+          width: k,
+          height: k,
+          borderRadius: 999,
+          background: "#ffffff",
+          boxShadow: on
+            ? "0 1px 2px rgba(14,17,22,0.28)"
+            : "0 1px 2px rgba(14,17,22,0.18)",
+        }}
+      />
+    </span>
+  );
+}
+
+/* ───────── LineIcon (1.9px stroke, accent-colored — per Daylight design) ───────── */
+
+export type LineIconName =
+  | "database"
+  | "envelope"
+  | "chat"
+  | "warning"
+  | "trending-down"
+  | "rotate"
+  | "document"
+  | "plus"
+  | "arrow-down-right";
+
+export function LineIcon({
+  name,
+  color = "currentColor",
+  size = 17,
+  stroke = 1.9,
+}: {
+  name: LineIconName;
+  color?: string;
+  size?: number;
+  stroke?: number;
+}) {
+  const common = {
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: color,
+    strokeWidth: stroke,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  switch (name) {
+    case "database":
+      return (
+        <svg {...common}>
+          <ellipse cx="12" cy="5" rx="8" ry="3" />
+          <path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5" />
+          <path d="M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" />
+        </svg>
+      );
+    case "envelope":
+      return (
+        <svg {...common}>
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="m3 7 9 6 9-6" />
+        </svg>
+      );
+    case "chat":
+      return (
+        <svg {...common}>
+          <path d="M21 11.5a8.38 8.38 0 0 1-8.5 8.5 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3 8.5 8.5 0 0 1 21 11.5z" />
+        </svg>
+      );
+    case "warning":
+      return (
+        <svg {...common}>
+          <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+          <path d="M12 9v4" />
+          <path d="M12 17h.01" />
+        </svg>
+      );
+    case "trending-down":
+      return (
+        <svg {...common}>
+          <polyline points="22 17 13.5 8.5 8.5 13.5 2 7" />
+          <polyline points="16 17 22 17 22 11" />
+        </svg>
+      );
+    case "rotate":
+      return (
+        <svg {...common}>
+          <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+          <path d="M3 3v5h5" />
+        </svg>
+      );
+    case "document":
+      return (
+        <svg {...common}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <path d="M14 2v6h6" />
+          <path d="M8 13h8M8 17h8M8 9h2" />
+        </svg>
+      );
+    case "plus":
+      return (
+        <svg {...common}>
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      );
+    case "arrow-down-right":
+      return (
+        <svg {...common}>
+          <path d="M7 7l10 10M17 9v8h-8" />
+        </svg>
+      );
+  }
 }
 
 /* ───────── fmtAgo ───────── */

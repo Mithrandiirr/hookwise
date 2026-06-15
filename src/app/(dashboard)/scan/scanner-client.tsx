@@ -280,8 +280,8 @@ export function ScannerClient({
                 padding: "10px 14px",
                 fontSize: 12,
                 color: "var(--hw-amber)",
-                background: "rgba(251,191,36,0.06)",
-                borderColor: "rgba(251,191,36,0.22)",
+                background: "#fdeada",
+                borderColor: "#f4c9ad",
               }}
             >
               Account has more than 10,000 events. Showing the first 10,000.

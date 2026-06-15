@@ -3,7 +3,7 @@ export function BarGrid({
   width = 600,
   height = 60,
   barColor = "#818cf8",
-  failColor = "#f87171",
+  failColor = "#dc2626",
 }: {
   data: { total: number; fail?: number }[];
   width?: number;

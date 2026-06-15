@@ -48,8 +48,8 @@ export function FirstLoadView({
               gap: 6,
               padding: "5px 12px",
               borderRadius: 999,
-              border: "1px solid rgba(154,199,255,0.35)",
-              background: "rgba(154,199,255,0.06)",
+              border: "1px solid #c8e4f6",
+              background: "#e8f4fb",
               fontSize: 11,
               color: "var(--hf-accent)",
               letterSpacing: "0.04em",
@@ -83,7 +83,7 @@ export function FirstLoadView({
             label="Provider failure rate"
             value={`${(summary.failureRate * 100).toFixed(2)}%`}
             sub={`${summary.failedEvents.toLocaleString()} of ${summary.totalEvents.toLocaleString()} flagged`}
-            color={summary.failureRate > 0.005 ? "#fbbf24" : "var(--hf-ink)"}
+            color={summary.failureRate > 0.005 ? "#d97706" : "var(--hf-ink)"}
           />
           <Tile
             label="Top failing event"
@@ -116,7 +116,7 @@ export function FirstLoadView({
         >
           Numbers above are computed from a {summary.windowDays}-day back-poll of your provider&apos;s
           API. The estimates use a {(summary.assumedFailureRate * 100).toFixed(2)}% cohort-baseline
-          failure rate — your actual measurement starts once you wire your webhook to HookWise.
+          failure rate — your actual measurement starts once you wire your webhook to Trueline.
         </p>
       </div>
     </>
@@ -158,8 +158,8 @@ function Hero({
       </h1>
       <p style={{ fontSize: 13.5, color: "var(--hf-ink-3)", lineHeight: 1.55, margin: "12px 0 0", maxWidth: 680 }}>
         {isTierA
-          ? "Estimated impact if your endpoint had dropped at industry-baseline rates over this window. Your actual exposure is measured the moment you wire your webhook to HookWise."
-          : "Estimated count of deliveries HookWise would have caught for you over this window. Wire your webhook to start measuring."}
+          ? "Estimated impact if your endpoint had dropped at industry-baseline rates over this window. Your actual exposure is measured the moment you wire your webhook to Trueline."
+          : "Estimated count of deliveries Trueline would have caught for you over this window. Wire your webhook to start measuring."}
       </p>
 
       {isTierA && summary.revenueProtectedCents != null && (
@@ -226,7 +226,7 @@ function DiagnosisCard({
           }}
         >
           No failures detected in your {summary.windowDays}-day history. Clean run. Once you wire
-          live webhooks, HookWise will diagnose anomalies in real time and surface them here.
+          live webhooks, Trueline will diagnose anomalies in real time and surface them here.
         </p>
       </div>
     );
@@ -238,8 +238,8 @@ function DiagnosisCard({
     <div
       style={{
         background:
-          "linear-gradient(135deg, rgba(196,165,255,0.08), transparent 50%), var(--hf-bg-3)",
-        border: "1px solid rgba(196,165,255,0.3)",
+          "linear-gradient(135deg, #efeafb, transparent 50%), var(--hf-bg-3)",
+        border: "1px solid #ddd0f5",
         borderRadius: 14,
         padding: "22px 26px",
       }}
@@ -258,9 +258,9 @@ function DiagnosisCard({
             fontSize: 10,
             padding: "3px 8px",
             borderRadius: 999,
-            background: "rgba(196,165,255,0.12)",
-            color: "#c4a5ff",
-            border: "1px solid rgba(196,165,255,0.3)",
+            background: "#efeafb",
+            color: "#7c5cd6",
+            border: "1px solid #ddd0f5",
             letterSpacing: "0.08em",
             textTransform: "uppercase",
           }}
@@ -281,7 +281,7 @@ function DiagnosisCard({
           color: "var(--hf-ink)",
         }}
       >
-        <span className="hf-mono" style={{ color: "#c4a5ff" }}>{failure.eventType}</span>{" "}
+        <span className="hf-mono" style={{ color: "#7c5cd6" }}>{failure.eventType}</span>{" "}
         is your top failure pattern.
       </h3>
 
@@ -295,7 +295,7 @@ function DiagnosisCard({
           padding: "12px 14px",
           border: "1px solid var(--hf-line)",
           borderRadius: 10,
-          background: "rgba(255,255,255,0.02)",
+          background: "#f1f2f5",
         }}
       >
         <div
@@ -356,11 +356,11 @@ function ConnectCta({ integrationId }: { integrationId: string }) {
             color: "var(--hf-ink)",
           }}
         >
-          Point your webhook at HookWise.
+          Point your webhook at Trueline.
         </h3>
         <p style={{ fontSize: 13, color: "var(--hf-ink-3)", margin: 0, lineHeight: 1.5, maxWidth: 600 }}>
           The back-poll proves the volume. Now wire your provider&apos;s webhook subscription
-          to HookWise so we&apos;re catching drops the moment they happen — not 30 days late.
+          to Trueline so we&apos;re catching drops the moment they happen — not 30 days late.
         </p>
       </div>
       <Link href={`/integrations/${integrationId}`} className="hf-btn pill">
@@ -473,7 +473,7 @@ function remediationFor(eventType: string): { summary: string; action: string } 
       summary:
         "Failed payment intents are typically retry-able — most resolve when the customer retries with the same or a different method within 24h. The webhook firing isn't the problem; the downstream side often is.",
       action:
-        "Ensure your handler is idempotent on payment_intent.id so retries don't double-charge state. HookWise dedupes by provider_event_id; if you mirror that key on your side, you're covered.",
+        "Ensure your handler is idempotent on payment_intent.id so retries don't double-charge state. Trueline dedupes by provider_event_id; if you mirror that key on your side, you're covered.",
     };
   }
   if (t.includes("charge.failed")) {
@@ -481,7 +481,7 @@ function remediationFor(eventType: string): { summary: string; action: string } 
       summary:
         "Charge failures fall into two buckets: provider-side decline (card declined, fraud) and integration-side timeout (your handler took too long to ack). The breakdown is in the failure_code on each event.",
       action:
-        "Group these by failure_code first — declines aren't your problem to fix; timeouts are. HookWise will start retrying with backoff once you wire live ingestion.",
+        "Group these by failure_code first — declines aren't your problem to fix; timeouts are. Trueline will start retrying with backoff once you wire live ingestion.",
     };
   }
   if (t.includes("invoice.payment_failed")) {
@@ -489,7 +489,7 @@ function remediationFor(eventType: string): { summary: string; action: string } 
       summary:
         "Failed invoice payments are usually expired cards or insufficient funds. Stripe will dunning-retry per your account's retry settings, but you need the webhook to mark the subscription correctly in your DB.",
       action:
-        "Verify your handler updates subscription status on invoice.payment_failed events. HookWise reconciliation will catch any of these your endpoint silently dropped.",
+        "Verify your handler updates subscription status on invoice.payment_failed events. Trueline reconciliation will catch any of these your endpoint silently dropped.",
     };
   }
   if (t.startsWith("orders.refunded") || t.includes("refunded")) {
@@ -497,7 +497,7 @@ function remediationFor(eventType: string): { summary: string; action: string } 
       summary:
         "Refunded orders need to propagate to inventory, accounting, and any downstream fulfillment systems. If your handler missed even one of these, your books and stock are out of sync.",
       action:
-        "Reconcile your refund ledger against Shopify's. HookWise's reconciler will keep this aligned automatically once live, but it's worth a one-time audit now.",
+        "Reconcile your refund ledger against Shopify's. Trueline's reconciler will keep this aligned automatically once live, but it's worth a one-time audit now.",
     };
   }
   if (t.includes("voided")) {
@@ -513,12 +513,12 @@ function remediationFor(eventType: string): { summary: string; action: string } 
       summary:
         "Disputes carry deadlines — usually 7-21 days from notification. A dropped webhook here is the worst kind of drop, because it costs you the dispute by default.",
       action:
-        "Ensure dispute webhooks alert a human, not just a log line. HookWise can route these to Slack/PagerDuty once you wire live alerts.",
+        "Ensure dispute webhooks alert a human, not just a log line. Trueline can route these to Slack/PagerDuty once you wire live alerts.",
     };
   }
   return {
     summary: `${eventType} fired ${"multiple times"} in your history. Without delivery confirmation we can't tell whether your handler processed them — but the volume alone is a signal worth investigating.`,
     action:
-      "Once you wire your webhook to HookWise, we'll measure your actual delivery success on this event type and diagnose the root cause in real time.",
+      "Once you wire your webhook to Trueline, we'll measure your actual delivery success on this event type and diagnose the root cause in real time.",
   };
 }

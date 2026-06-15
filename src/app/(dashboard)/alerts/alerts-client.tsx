@@ -1,409 +1,344 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Chip, Icon, DashTopbar, ProviderMark } from "@/components/hw";
+import type { ReactNode } from "react";
+import { Panel } from "@/components/hw";
 
-type AlertConfig = {
-  id: string;
-  integrationId: string;
-  channel: string;
-  destination: string;
-  threshold: number | null;
-  enabled: boolean;
-  createdAt: string;
-};
+/* ───────── line icons (1.9px stroke, accent-colored — per Daylight design) ───────── */
 
-type Integration = {
-  id: string;
-  name: string;
-  provider: string;
-};
-
-export function AlertsClient({
-  integrations,
-  configs: initialConfigs,
-}: {
-  integrations: Integration[];
-  configs: AlertConfig[];
-}) {
-  const router = useRouter();
-  const [configs, setConfigs] = useState(initialConfigs);
-  const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const [integrationId, setIntegrationId] = useState(integrations[0]?.id ?? "");
-  const [channel, setChannel] = useState<"email" | "slack">("email");
-  const [destination, setDestination] = useState("");
-  const [threshold, setThreshold] = useState<number>(3);
-
-  const integrationMap = new Map(integrations.map((i) => [i.id, i] as const));
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    setLoading(true);
-    const res = await fetch("/api/alert-configs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ integrationId, channel, destination, threshold }),
-    });
-    if (res.ok) {
-      const created = await res.json();
-      setConfigs((prev) => [
-        ...prev,
-        { ...created, createdAt: created.createdAt ?? new Date().toISOString() },
-      ]);
-      setShowForm(false);
-      setDestination("");
-      router.refresh();
-    }
-    setLoading(false);
-  }
-
-  async function handleToggle(id: string, enabled: boolean) {
-    const res = await fetch(`/api/alert-configs?id=${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ enabled: !enabled }),
-    });
-    if (res.ok) {
-      setConfigs((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, enabled: !enabled } : c)),
+function TileIcon({ name, color }: { name: RuleIcon; color: string }) {
+  const common = {
+    width: 17,
+    height: 17,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: color,
+    strokeWidth: 1.9,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+  switch (name) {
+    case "warning":
+      return (
+        <svg {...common}>
+          <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+          <path d="M12 9v4" />
+          <path d="M12 17h.01" />
+        </svg>
       );
-    }
+    case "trending-down":
+      return (
+        <svg {...common}>
+          <polyline points="22 17 13.5 8.5 8.5 13.5 2 7" />
+          <polyline points="16 17 22 17 22 11" />
+        </svg>
+      );
+    case "rotate":
+      return (
+        <svg {...common}>
+          <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+          <path d="M3 3v5h5" />
+        </svg>
+      );
+    case "document":
+      return (
+        <svg {...common}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <path d="M14 2v6h6" />
+          <path d="M8 13h8M8 17h8M8 9h2" />
+        </svg>
+      );
   }
+}
 
-  async function handleDelete(id: string) {
-    const res = await fetch(`/api/alert-configs?id=${id}`, {
-      method: "DELETE",
-    });
-    if (res.ok) setConfigs((prev) => prev.filter((c) => c.id !== id));
-  }
+type RuleIcon = "warning" | "trending-down" | "rotate" | "document";
 
-  const activeCount = configs.filter((c) => c.enabled).length;
+/* ───────── new toggle: inset track + drop-shadow knob ───────── */
 
+function Toggle({
+  on,
+  onClick,
+}: {
+  on: boolean;
+  onClick: () => void;
+}) {
   return (
-    <>
-      <DashTopbar
-        title="Alerts"
-        subtitle="tell us where to find you when things break"
-        right={
-          <>
-            <div
-              className="flex items-center"
-              style={{
-                gap: 8,
-                padding: "6px 10px",
-                border: "1px solid var(--hw-line-2)",
-                borderRadius: 7,
-              }}
-            >
-              <span
-                className="hw-mono"
-                style={{ fontSize: 11, color: "var(--hw-ink-2)" }}
-              >
-                {activeCount} active · {configs.length - activeCount} paused
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowForm(!showForm)}
-              className="hw-btn hw-btn-indigo"
-            >
-              <Icon name="bell" size={13} /> New alert
-            </button>
-          </>
-        }
-      />
-
-      <div
-        className="hw-scroll flex flex-col"
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={on}
+      style={{
+        width: 36,
+        height: 21,
+        borderRadius: 999,
+        border: "none",
+        padding: 0,
+        cursor: "pointer",
+        background: on ? "var(--hf-accent)" : "#ccd1d9",
+        boxShadow: on
+          ? "inset 0 1px 2px rgba(2,55,85,0.35)"
+          : "inset 0 1px 2px rgba(14,17,22,0.1)",
+        position: "relative",
+        flexShrink: 0,
+      }}
+    >
+      <span
         style={{
-          padding: "24px 28px 40px",
-          gap: 20,
-          overflow: "auto",
-          flex: 1,
+          position: "absolute",
+          top: 2,
+          left: on ? 17 : 2,
+          width: 17,
+          height: 17,
+          borderRadius: 999,
+          background: "#ffffff",
+          boxShadow: on
+            ? "0 1px 2px rgba(14,17,22,0.28)"
+            : "0 1px 2px rgba(14,17,22,0.18)",
+          transition: "left 140ms ease",
         }}
-      >
-        {showForm && (
-          <form
-            onSubmit={handleCreate}
-            className="hw-fade-up hw-panel"
-            style={{ padding: 22, background: "var(--hw-bg-2)" }}
-          >
-            <div
-              className="grid"
-              style={{ gridTemplateColumns: "1fr 1fr", gap: 14 }}
-            >
-              <Field label="Integration">
-                <select
-                  value={integrationId}
-                  onChange={(e) => setIntegrationId(e.target.value)}
-                  className="hw-input"
-                >
-                  {integrations.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.name} ({i.provider})
-                    </option>
-                  ))}
-                </select>
-              </Field>
-              <Field label="Channel">
-                <select
-                  value={channel}
-                  onChange={(e) =>
-                    setChannel(e.target.value as "email" | "slack")
-                  }
-                  className="hw-input"
-                >
-                  <option value="email">Email</option>
-                  <option value="slack">Slack</option>
-                </select>
-              </Field>
-              <Field label="Destination">
-                <input
-                  type="text"
-                  required
-                  value={destination}
-                  onChange={(e) => setDestination(e.target.value)}
-                  placeholder={
-                    channel === "email"
-                      ? "team@company.com"
-                      : "https://hooks.slack.com/..."
-                  }
-                  className="hw-input hw-mono"
-                />
-              </Field>
-              <Field label="Severity threshold (1–4)">
-                <input
-                  type="number"
-                  min={1}
-                  max={4}
-                  value={threshold}
-                  onChange={(e) => setThreshold(Number(e.target.value))}
-                  className="hw-input hw-mono"
-                />
-              </Field>
-            </div>
-            <div
-              className="flex items-center justify-end"
-              style={{ gap: 10, marginTop: 16 }}
-            >
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="hw-btn hw-btn-ghost"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="hw-btn hw-btn-primary"
-                style={{ opacity: loading ? 0.6 : 1 }}
-              >
-                {loading ? "Creating…" : "Create alert"}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {configs.length === 0 ? (
-          <section className="hw-fade-up">
-            <div
-              className="hw-panel flex flex-col items-center justify-center"
-              style={{
-                padding: "72px 24px",
-                background: "var(--hw-bg-2)",
-                textAlign: "center",
-                gap: 12,
-              }}
-            >
-              <div
-                className="grid place-items-center"
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 12,
-                  background: "var(--hw-panel)",
-                  border: "1px solid var(--hw-line)",
-                }}
-              >
-                <Icon name="bell" size={22} color="var(--hw-ink-4)" />
-              </div>
-              <div style={{ fontSize: 15, color: "var(--hw-ink)" }}>
-                No alerts configured
-              </div>
-              <div
-                style={{
-                  fontSize: 12.5,
-                  color: "var(--hw-ink-4)",
-                  maxWidth: 360,
-                }}
-              >
-                Create an alert to get notified the moment HookWise detects an
-                anomaly or delivery failure.
-              </div>
-            </div>
-          </section>
-        ) : (
-          <section className="hw-fade-up">
-            <div
-              className="hw-panel overflow-hidden"
-              style={{ background: "var(--hw-bg-2)" }}
-            >
-              <div
-                style={{
-                  padding: "14px 20px",
-                  borderBottom: "1px solid var(--hw-line)",
-                }}
-              >
-                <span className="hw-label">
-                  {configs.length} ALERT{configs.length === 1 ? "" : "S"}
-                </span>
-              </div>
-              <table className="hw-table">
-                <thead>
-                  <tr>
-                    <th>Integration</th>
-                    <th>Channel</th>
-                    <th>Destination</th>
-                    <th style={{ textAlign: "right" }}>Threshold</th>
-                    <th>Status</th>
-                    <th style={{ width: 40 }} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {configs.map((c) => {
-                    const integ = integrationMap.get(c.integrationId);
-                    return (
-                      <tr key={c.id}>
-                        <td>
-                          <div className="flex items-center" style={{ gap: 8 }}>
-                            {integ && (
-                              <ProviderMark
-                                provider={integ.provider}
-                                size={14}
-                              />
-                            )}
-                            <span
-                              style={{ fontSize: 13, color: "var(--hw-ink)" }}
-                            >
-                              {integ?.name ?? c.integrationId.slice(0, 8)}
-                            </span>
-                          </div>
-                        </td>
-                        <td>
-                          <Chip>{c.channel}</Chip>
-                        </td>
-                        <td
-                          className="hw-mono"
-                          style={{
-                            fontSize: 11.5,
-                            color: "var(--hw-ink-3)",
-                            maxWidth: 260,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {c.destination}
-                        </td>
-                        <td
-                          className="hw-mono hw-num"
-                          style={{
-                            textAlign: "right",
-                            color: "var(--hw-ink-2)",
-                          }}
-                        >
-                          sev ≥ {c.threshold ?? "—"}
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            onClick={() => handleToggle(c.id, c.enabled)}
-                            className="hw-btn hw-btn-ghost"
-                            style={{
-                              padding: "4px 8px",
-                              fontSize: 11,
-                            }}
-                          >
-                            <span
-                              style={{
-                                width: 6,
-                                height: 6,
-                                borderRadius: 999,
-                                background: c.enabled
-                                  ? "var(--hw-green)"
-                                  : "var(--hw-ink-5)",
-                                display: "inline-block",
-                              }}
-                            />
-                            {c.enabled ? "active" : "paused"}
-                          </button>
-                        </td>
-                        <td style={{ textAlign: "right" }}>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(c.id)}
-                            aria-label="Delete alert"
-                            className="grid place-items-center"
-                            style={{
-                              width: 26,
-                              height: 26,
-                              color: "var(--hw-ink-4)",
-                              margin: "0 0 0 auto",
-                            }}
-                          >
-                            <Icon name="x" size={13} />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
-      </div>
-      <style jsx>{`
-        :global(.hw-input) {
-          width: 100%;
-          padding: 10px 12px;
-          border-radius: 8px;
-          background: var(--hw-bg-3);
-          border: 1px solid var(--hw-line-2);
-          color: var(--hw-ink);
-          font-size: 13px;
-          transition: all 150ms;
-        }
-        :global(.hw-input:focus) {
-          outline: none;
-          border-color: rgba(129, 140, 248, 0.4);
-          box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.08);
-        }
-        :global(.hw-input::placeholder) {
-          color: var(--hw-ink-5);
-        }
-      `}</style>
-    </>
+      />
+    </button>
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+/* ───────── data ───────── */
+
+type Rule = {
+  id: string;
+  icon: RuleIcon;
+  accent: string;
+  tileBg: string;
+  title: string;
+  desc: string;
+  channels: string[];
+  on: boolean;
+};
+
+const INITIAL_RULES: Rule[] = [
+  {
+    id: "degrading",
+    icon: "warning",
+    accent: "#dd5008",
+    tileBg: "#fff8f3",
+    title: "Subscription degrading",
+    desc: "When p95 response > 3s or failures > 10/day on any topic — fires before Shopify auto-removes it.",
+    channels: ["Slack", "Email"],
+    on: true,
+  },
+  {
+    id: "gap-burst",
+    icon: "trending-down",
+    accent: "#dd5008",
+    tileBg: "#fff8f3",
+    title: "Gap burst detected",
+    desc: "When 3+ gaps are found within a single 15-minute window — usually a provider-side incident.",
+    channels: ["Slack"],
+    on: true,
+  },
+  {
+    id: "recovery-failed",
+    icon: "rotate",
+    accent: "#b3261e",
+    tileBg: "#fdecec",
+    title: "Recovery failed",
+    desc: "When a recovered event exhausts all 5 delivery attempts to your endpoint.",
+    channels: ["Slack", "Email", "PagerDuty"],
+    on: true,
+  },
+  {
+    id: "statement",
+    icon: "document",
+    accent: "#0369a1",
+    tileBg: "#f1f6fa",
+    title: "Monthly assurance statement",
+    desc: "A summary of everything recovered, emailed on the 1st — your proof of value.",
+    channels: ["Email"],
+    on: false,
+  },
+];
+
+const RECENT: { dot: string; title: string; sub: ReactNode; at: string }[] = [
+  {
+    dot: "#ed8936",
+    title: "orders/updated degrading",
+    sub: "p95 hit 4.8s · alerted Slack + Email",
+    at: "Jun 12, 23:41",
+  },
+  {
+    dot: "#ed8936",
+    title: "Gap burst · 4 in 15 min",
+    sub: "all 4 recovered within 5 min",
+    at: "Jun 12, 23:18",
+  },
+  {
+    dot: "#22c55e",
+    title: "Back in parity",
+    sub: "orders/updated recovered to 100%",
+    at: "Jun 12, 23:46",
+  },
+  {
+    dot: "#0369a1",
+    title: "May statement sent",
+    sub: (
+      <>
+        <span style={{ color: "#dd5008", fontWeight: 600 }}>$6,204</span> assured
+        in May
+      </>
+    ),
+    at: "Jun 1, 09:00",
+  },
+];
+
+/* ───────── client ───────── */
+
+export function AlertsClient() {
+  const [rules, setRules] = useState(INITIAL_RULES);
+
+  function toggle(id: string) {
+    setRules((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, on: !r.on } : r)),
+    );
+  }
+
   return (
-    <div>
-      <label className="hw-label" style={{ display: "block", marginBottom: 8 }}>
-        {label}
-      </label>
-      {children}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 360px",
+        gap: 10,
+        alignItems: "start",
+      }}
+    >
+      {/* rules */}
+      <Panel title="Alert rules" padded={false}>
+        {rules.map((r, i) => (
+          <div
+            key={r.id}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr auto",
+              gap: 14,
+              alignItems: "center",
+              padding: "16px 22px",
+              borderBottom:
+                i < rules.length - 1 ? "1px solid var(--hf-line)" : "none",
+            }}
+          >
+            <div style={{ display: "flex", gap: 13, alignItems: "flex-start" }}>
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 9,
+                  background: r.tileBg,
+                  display: "grid",
+                  placeItems: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <TileIcon name={r.icon} color={r.accent} />
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    color: "var(--hf-ink)",
+                  }}
+                >
+                  {r.title}
+                </div>
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "var(--hf-ink-3)",
+                    marginTop: 2,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {r.desc}
+                </div>
+                <div style={{ display: "flex", gap: 6, marginTop: 8 }}>
+                  {r.channels.map((c) => (
+                    <span
+                      key={c}
+                      className="hf-mono"
+                      style={{
+                        fontSize: 10,
+                        color: "var(--hf-ink-3)",
+                        background: "#f1f2f5",
+                        borderRadius: 999,
+                        padding: "2px 8px",
+                      }}
+                    >
+                      {c}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <Toggle on={r.on} onClick={() => toggle(r.id)} />
+          </div>
+        ))}
+      </Panel>
+
+      {/* recent alerts feed */}
+      <Panel title="Recent alerts" padded={false}>
+        {RECENT.map((a, i) => (
+          <div
+            key={a.title}
+            style={{
+              display: "flex",
+              gap: 12,
+              padding: "14px 22px",
+              borderBottom:
+                i < RECENT.length - 1 ? "1px solid var(--hf-line)" : "none",
+            }}
+          >
+            <div
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: 999,
+                background: a.dot,
+                marginTop: 5,
+                flexShrink: 0,
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: 12.5,
+                  fontWeight: 550,
+                  color: "var(--hf-ink)",
+                }}
+              >
+                {a.title}
+              </div>
+              <div
+                style={{
+                  fontSize: 11.5,
+                  color: "var(--hf-ink-3)",
+                  lineHeight: 1.45,
+                  marginTop: 2,
+                }}
+              >
+                {a.sub}
+              </div>
+              <div
+                className="hf-mono"
+                style={{
+                  fontSize: 10,
+                  color: "var(--hf-ink-4)",
+                  marginTop: 5,
+                }}
+              >
+                {a.at}
+              </div>
+            </div>
+          </div>
+        ))}
+      </Panel>
     </div>
   );
 }

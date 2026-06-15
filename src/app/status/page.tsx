@@ -6,13 +6,13 @@ import { StatusClient } from "./status-client";
 import { RealtimeRefresh } from "@/components/dashboard/realtime-refresh";
 
 export const metadata: Metadata = {
-  title: "HookWise Status — Provider Health Dashboard",
+  title: "Trueline Status — Provider Health Dashboard",
   description:
-    "Real-time webhook provider health status for Stripe, Shopify, and GitHub. Monitor latency, failure rates, and event volumes across the HookWise network.",
+    "Real-time webhook provider health status for Stripe, Shopify, and GitHub. Monitor latency, failure rates, and event volumes across the Trueline network.",
   openGraph: {
-    title: "HookWise Status — Provider Health Dashboard",
+    title: "Trueline Status — Provider Health Dashboard",
     description:
-      "Real-time webhook provider health status across the HookWise network.",
+      "Real-time webhook provider health status across the Trueline network.",
     type: "website",
   },
 };

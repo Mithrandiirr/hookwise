@@ -169,7 +169,7 @@ export default async function HealthPage() {
             ) : allHealthy ? (
               <>
                 All providers{" "}
-                <span className="hf-serif" style={{ color: "#7ed98a" }}>
+                <span className="hf-serif" style={{ color: "#16a34a" }}>
                   healthy
                 </span>
                 .
@@ -205,8 +205,8 @@ export default async function HealthPage() {
             label="HEALTHY"
             value={totals.healthy}
             sub={`${providerCards.length} total`}
-            color="#7ed98a"
-            accent="#7ed98a"
+            color="#16a34a"
+            accent="#16a34a"
           />
           <StatTile
             label="P95 LATENCY"
@@ -228,8 +228,8 @@ export default async function HealthPage() {
             label="OPEN CIRCUITS"
             value={openCircuits}
             sub={openCircuits === 0 ? "all closed" : "half-open or open"}
-            color={openCircuits === 0 ? "#7ed98a" : "#fbbf24"}
-            accent={openCircuits === 0 ? "#7ed98a" : "#fbbf24"}
+            color={openCircuits === 0 ? "#16a34a" : "#d97706"}
+            accent={openCircuits === 0 ? "#16a34a" : "#d97706"}
           />
         </div>
 
@@ -304,7 +304,7 @@ export default async function HealthPage() {
                   padding: "14px 24px",
                   borderBottom:
                     i < a.length - 1
-                      ? "1px solid rgba(255,255,255,0.03)"
+                      ? "1px solid #f1f2f5"
                       : "none",
                   alignItems: "center",
                 }}
@@ -326,7 +326,7 @@ export default async function HealthPage() {
                   className="hf-mono"
                   style={{
                     fontSize: 12,
-                    color: e.p95 > 1000 ? "#fbbf24" : "var(--hf-ink-2)",
+                    color: e.p95 > 1000 ? "#d97706" : "var(--hf-ink-2)",
                     textAlign: "right",
                   }}
                 >
@@ -336,7 +336,7 @@ export default async function HealthPage() {
                   className="hf-mono"
                   style={{
                     fontSize: 12,
-                    color: e.successRate < 99 ? "#fbbf24" : "#7ed98a",
+                    color: e.successRate < 99 ? "#d97706" : "#16a34a",
                     textAlign: "right",
                   }}
                 >
@@ -502,7 +502,7 @@ function MiniMetric({
         className="hf-num hf-mono"
         style={{
           fontSize: 16,
-          color: value == null ? "var(--hf-ink-4)" : warn ? "#fbbf24" : "var(--hf-ink)",
+          color: value == null ? "var(--hf-ink-4)" : warn ? "#d97706" : "var(--hf-ink)",
           fontWeight: 500,
         }}
       >

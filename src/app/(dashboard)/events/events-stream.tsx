@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -64,9 +64,9 @@ export function EventsStreamClient({ rows }: { rows: EventRow[] }) {
     ms === -1
       ? "var(--hf-ink-4)"
       : ms > 2000
-        ? "#f29a9a"
+        ? "#dc2626"
         : ms > 500
-          ? "#fbbf24"
+          ? "#d97706"
           : "var(--hf-ink-3)";
 
   const payload = useMemo(() => {
@@ -105,8 +105,8 @@ export function EventsStreamClient({ rows }: { rows: EventRow[] }) {
           <span className="hf-mono" style={{ fontSize: 12, color: "var(--hf-ink-3)" }}>
             <span style={{ color: "var(--hf-accent)" }}>provider</span>:*{" "}
             <span style={{ color: "var(--hf-accent)" }}>status</span>:
-            <span style={{ color: "#7ed98a" }}>ok</span>|
-            <span style={{ color: "#f29a9a" }}>fail</span>{" "}
+            <span style={{ color: "#16a34a" }}>ok</span>|
+            <span style={{ color: "#dc2626" }}>fail</span>{" "}
             <span style={{ color: "var(--hf-accent)" }}>amount</span>
             &gt;=0
           </span>
@@ -308,19 +308,19 @@ export function EventsStreamClient({ rows }: { rows: EventRow[] }) {
                 <div style={{ ...LABEL_STYLE, marginBottom: 10 }}>Delivery timeline</div>
                 {(
                   [
-                    { l: "Received", t: "+0ms", c: "#7ed98a" },
-                    { l: "Signature OK", t: "+2ms", c: "#7ed98a" },
-                    { l: "Dedup check", t: "+3ms", c: "#7ed98a" },
-                    { l: "Persisted", t: "+11ms", c: "#7ed98a" },
+                    { l: "Received", t: "+0ms", c: "#16a34a" },
+                    { l: "Signature OK", t: "+2ms", c: "#16a34a" },
+                    { l: "Dedup check", t: "+3ms", c: "#16a34a" },
+                    { l: "Persisted", t: "+11ms", c: "#16a34a" },
                     {
                       l: sel.status === "ok" ? "Delivered" : "Delivery",
                       t: sel.latencyMs > 0 ? `+${sel.latencyMs}ms` : "—",
                       c:
                         sel.status === "fail"
-                          ? "#f29a9a"
+                          ? "#dc2626"
                           : sel.status === "retry"
-                            ? "#fbbf24"
-                            : "#7ed98a",
+                            ? "#d97706"
+                            : "#16a34a",
                     },
                   ]
                 ).map((s, i, arr) => (
