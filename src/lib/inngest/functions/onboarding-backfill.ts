@@ -1,5 +1,5 @@
 // Day 2 — backwards-poll job for first-signup magic moment.
-// Reuses provider APIs (Shopify orders.json, Stripe /v1/events) but with since: now-30d.
+// Reuses the Shopify orders.json API but with since: now-30d.
 // Caps at maxEvents so a high-volume signup doesn't blow through free-tier in one job.
 // Marks rows with source='onboarding_backfill' so they're distinguishable from live webhooks
 // and reconciliation gap-fills.
@@ -12,7 +12,7 @@ import { and, eq, sql, desc } from "drizzle-orm";
 import { resolveOrgTier } from "@/lib/tier";
 
 // Industry-baseline failure rate used for the projection. Roughly aligned with public
-// numbers from Stripe/Shopify webhook reliability reports. Honest framing: this is an
+// numbers from Shopify webhook reliability reports. Honest framing: this is an
 // *estimate* extrapolated from cohort baselines, not measurement of the customer's own
 // historical drops (HookWise wasn't live yet — we can't measure what they actually lost).
 const ASSUMED_FAILURE_RATE = 0.003;
@@ -25,14 +25,6 @@ type ShopifyOrder = {
   total_price?: string;
   financial_status?: string | null;
   fulfillment_status?: string | null;
-  [k: string]: unknown;
-};
-
-type StripeEvent = {
-  id: string;
-  type: string;
-  created: number;
-  data: { object?: { amount?: number; amount_received?: number; [k: string]: unknown } };
   [k: string]: unknown;
 };
 
@@ -113,17 +105,6 @@ export const onboardingBackfill = inngest.createFunction(
         if (!integration.providerDomain) throw new Error("shopify integration missing providerDomain");
         const result = await runShopifyBackfill({
           shopDomain: integration.providerDomain,
-          apiKey,
-          since,
-          maxEvents,
-          integrationId,
-          runId: run.id,
-          step,
-        });
-        inserted = result.inserted;
-        capped = result.capped;
-      } else if (integration.provider === "stripe") {
-        const result = await runStripeBackfill({
           apiKey,
           since,
           maxEvents,
@@ -246,86 +227,6 @@ function parseShopifyAmountCents(totalPrice: string | undefined): number | null 
   return Math.round(n * 100);
 }
 
-// -------- Stripe --------
-
-async function runStripeBackfill(args: {
-  apiKey: string;
-  since: Date;
-  maxEvents: number;
-  integrationId: string;
-  runId: string;
-  // Inngest's step object — full SDK shape. We only call step.run; widened to keep this
-  // helper independent of SDK type churn.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  step: any;
-}): Promise<{ inserted: number; capped: boolean }> {
-  const { apiKey, since, maxEvents, integrationId, runId, step } = args;
-  let startingAfter: string | undefined;
-  let inserted = 0;
-  let page = 0;
-  let hasMore = true;
-
-  while (hasMore && inserted < maxEvents) {
-    page += 1;
-    const cursor = startingAfter;
-    const { rows, more } = (await step.run(`stripe-page-${page}`, async () => {
-      const params = new URLSearchParams({
-        "created[gte]": String(Math.floor(since.getTime() / 1000)),
-        limit: "100",
-      });
-      if (cursor) params.set("starting_after", cursor);
-      const res = await fetch(`https://api.stripe.com/v1/events?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${apiKey}` },
-      });
-      if (!res.ok) {
-        throw new Error(`stripe ${res.status} at page ${page}`);
-      }
-      const body = (await res.json()) as { data: StripeEvent[]; has_more: boolean };
-      return { rows: body.data, more: body.has_more };
-    })) as { rows: StripeEvent[]; more: boolean };
-
-    if (rows.length === 0) break;
-
-    const remaining = maxEvents - inserted;
-    const slice = rows.slice(0, remaining);
-
-    await db.insert(events).values(
-      slice.map((e) => ({
-        integrationId,
-        eventType: e.type,
-        payload: e as unknown as Record<string, unknown>,
-        headers: {},
-        receivedAt: new Date(e.created * 1000),
-        signatureValid: true,
-        providerEventId: e.id,
-        source: "onboarding_backfill" as const,
-        amountCents: parseStripeAmountCents(e),
-      }))
-    );
-
-    inserted += slice.length;
-    await db
-      .update(backfillRuns)
-      .set({ scanned: inserted })
-      .where(eq(backfillRuns.id, runId));
-
-    if (slice.length < rows.length) {
-      return { inserted, capped: true };
-    }
-    hasMore = more;
-    startingAfter = rows[rows.length - 1].id;
-  }
-
-  return { inserted, capped: hasMore && inserted >= maxEvents };
-}
-
-function parseStripeAmountCents(e: StripeEvent): number | null {
-  const obj = e.data?.object;
-  if (!obj) return null;
-  const a = (obj.amount ?? obj.amount_received) as number | undefined;
-  return typeof a === "number" ? a : null;
-}
-
 // -------- Summary --------
 
 async function computeSummary(args: {
@@ -384,8 +285,8 @@ async function computeSummary(args: {
     : null;
   const estimatedAutoRecovered = Math.round(totalEvents * ASSUMED_FAILURE_RATE);
 
-  // Failure pattern detection — Stripe *.failed event types + Shopify voided/refunded.
-  // SQL pattern catches both (event_type LIKE '%failed%' OR '%refunded%' OR '%voided%').
+  // Failure pattern detection — Shopify voided/refunded orders.
+  // SQL pattern catches them (event_type LIKE '%failed%' OR '%refunded%' OR '%voided%').
   // This is provider-reported failures, not webhook delivery drops — those need live HookWise.
   const failureRows = await db
     .select({

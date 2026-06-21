@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Chip, Dot, Icon, ProviderMark } from "@/components/hw";
 
-type Provider = "stripe" | "shopify";
+type Provider = "shopify";
 type ScanState = "form" | "scanning" | "results" | "error";
 
 interface EventTypeBreakdown {
@@ -29,7 +29,7 @@ interface ScanReport {
 
 export function ScannerFlow() {
   const [state, setState] = useState<ScanState>("form");
-  const [provider, setProvider] = useState<Provider>("stripe");
+  const [provider, setProvider] = useState<Provider>("shopify");
   const [apiKey, setApiKey] = useState("");
   const [shopDomain, setShopDomain] = useState("");
   const [errorMessage, setErrorMessage] = useState("");

@@ -1,4 +1,4 @@
-export type Provider = "stripe" | "shopify" | "github";
+export type Provider = "shopify";
 
 export type IntegrationStatus = "active" | "paused" | "error";
 

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { runScan } from "@/lib/scanner/scan";
 
 const scanRequestSchema = z.object({
-  provider: z.enum(["stripe", "shopify"]),
+  provider: z.literal("shopify"),
   apiKey: z.string().min(1, "API key is required"),
   shopDomain: z.string().optional(),
   integrationId: z.string().uuid().optional(),

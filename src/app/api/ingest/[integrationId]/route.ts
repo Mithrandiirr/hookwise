@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, integrations, events } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { inngest } from "@/lib/inngest/client";
-import { verifyStripeSignature, extractStripeEventType, extractStripeEventId } from "@/lib/providers/stripe";
 import { verifyShopifySignature, extractShopifyEventType, extractShopifyEventId } from "@/lib/providers/shopify";
-import { verifyGitHubSignature, extractGitHubEventType, extractGitHubEventId } from "@/lib/providers/github";
 import { checkRateLimit } from "@/lib/redis/rate-limiter";
 
 export const runtime = "nodejs";
@@ -25,28 +23,12 @@ function verifySignature(
   secret: string
 ): { valid: boolean; eventType: string; providerEventId: string | null } {
   switch (provider) {
-    case "stripe": {
-      const header = headers["stripe-signature"] ?? "";
-      return {
-        valid: verifyStripeSignature(payload, header, secret),
-        eventType: extractStripeEventType(payload),
-        providerEventId: extractStripeEventId(payload),
-      };
-    }
     case "shopify": {
       const header = headers["x-shopify-hmac-sha256"] ?? "";
       return {
         valid: verifyShopifySignature(payload, header, secret),
         eventType: extractShopifyEventType(headers),
         providerEventId: extractShopifyEventId(headers),
-      };
-    }
-    case "github": {
-      const header = headers["x-hub-signature-256"] ?? "";
-      return {
-        valid: verifyGitHubSignature(payload, header, secret),
-        eventType: extractGitHubEventType(headers),
-        providerEventId: extractGitHubEventId(headers),
       };
     }
     default:

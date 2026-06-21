@@ -9,7 +9,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-type ProviderKey = "shopify" | "stripe";
+type ProviderKey = "shopify";
 
 type ProviderSpec = {
   key: ProviderKey;
@@ -34,18 +34,10 @@ const PROVIDERS: ProviderSpec[] = [
     needsDomain: true,
     domainPlaceholder: "your-store.myshopify.com",
   },
-  {
-    key: "stripe",
-    name: "Stripe",
-    blurb: "Reconcile charges, payment intents, subscription events against Stripe.",
-    keyLabel: "Restricted or secret key (read access to charges)",
-    keyPlaceholder: "rk_live_•••••••••••••••• or sk_live_••••••••••••••••",
-    docsUrl: "https://docs.stripe.com/keys#create-restricted-api-secret-key",
-  },
 ];
 
-// Hidden behind "More" — wired post-Day-1.
-const COMING_SOON = ["Clerk", "Resend", "GitHub", "Paddle", "Chargebee", "Lemon Squeezy", "Generic"];
+// Hidden behind "More" — demand-pulled, wired only when a paying customer asks.
+const COMING_SOON = ["Paddle", "Chargebee", "Lemon Squeezy", "WooCommerce", "BigCommerce", "Generic"];
 
 // Recommended subscription set per provider (Section 3 topics table).
 const TOPICS: Record<ProviderKey, Array<[string, string]>> = {
@@ -55,13 +47,6 @@ const TOPICS: Record<ProviderKey, Array<[string, string]>> = {
     ["orders/updated", "edit & cancellation flow"],
     ["fulfillment_events/create", "known gap reports, feb 2026"],
     ["refunds/create", "money-out completeness"],
-  ],
-  stripe: [
-    ["charge.succeeded", "core revenue signal"],
-    ["payment_intent.succeeded", "endpoint silent-fail window"],
-    ["charge.refunded", "money-out completeness"],
-    ["invoice.paid", "subscription revenue"],
-    ["customer.subscription.updated", "plan changes"],
   ],
 };
 

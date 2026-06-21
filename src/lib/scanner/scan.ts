@@ -1,4 +1,3 @@
-import { fetchStripeEvents } from "@/lib/providers/stripe-api";
 import { fetchShopifyOrders } from "@/lib/providers/shopify-api";
 import { extractAmountCents } from "./extract-amount";
 import { db, events } from "@/lib/db";
@@ -23,23 +22,12 @@ interface NormalizedEvent {
 
 export async function runScan(request: ScanRequest): Promise<ScanReport> {
   const since = new Date(Date.now() - SCAN_PERIOD_DAYS * 24 * 60 * 60 * 1000);
-  const until = new Date();
 
   // 1. Fetch provider events
   let providerEvents: NormalizedEvent[];
   let truncated = false;
 
-  if (request.provider === "stripe") {
-    const raw = await fetchStripeEvents(request.apiKey, since, until);
-    const capped = raw.slice(0, MAX_EVENTS);
-    truncated = raw.length > MAX_EVENTS;
-    providerEvents = capped.map((e) => ({
-      providerEventId: e.id,
-      eventType: e.type,
-      createdAt: new Date(e.created * 1000),
-      amountCents: extractAmountCents("stripe", e.type, e.data),
-    }));
-  } else if (request.provider === "shopify") {
+  if (request.provider === "shopify") {
     if (!request.shopDomain) {
       throw new Error("shopDomain is required for Shopify scans");
     }

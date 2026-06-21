@@ -6,7 +6,6 @@ import {
 } from "@/lib/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 import { inngest } from "@/lib/inngest/client";
-import { fetchStripeEvents } from "@/lib/providers/stripe-api";
 import { fetchShopifyOrders } from "@/lib/providers/shopify-api";
 import { extractAmountCents } from "@/lib/scanner/extract-amount";
 import { maturityCutoff, maturityWindowMs } from "@/lib/audit/maturity";
@@ -192,16 +191,7 @@ async function fetchProviderEvents(
     { type: string; payload: Record<string, unknown>; occurredAt: Date }
   >();
 
-  if (provider === "stripe") {
-    const stripeEvents = await fetchStripeEvents(apiKey, since, until);
-    for (const evt of stripeEvents) {
-      map.set(evt.id, {
-        type: evt.type,
-        payload: { id: evt.id, type: evt.type, created: evt.created, data: evt.data },
-        occurredAt: new Date(evt.created * 1000),
-      });
-    }
-  } else if (provider === "shopify") {
+  if (provider === "shopify") {
     if (!providerDomain) {
       console.error("[HookWise Reconciliation] No provider domain configured for Shopify integration");
       return map;
@@ -216,7 +206,6 @@ async function fetchProviderEvents(
       });
     }
   }
-  // GitHub has no reconciliation API
 
   return map;
 }

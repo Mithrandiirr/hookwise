@@ -34,9 +34,6 @@ export const reconciliation = inngest.createFunction(
     const results: Array<{ integrationId: string; gapsDetected: number; gapsResolved: number }> = [];
 
     for (const integration of eligibleIntegrations) {
-      // GitHub has no reconciliation API
-      if (integration.provider === "github") continue;
-
       const result = await step.run(
         `reconcile-${integration.id}`,
         async () => {

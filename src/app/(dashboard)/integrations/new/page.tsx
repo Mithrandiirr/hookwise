@@ -14,22 +14,10 @@ const providers: {
   hint: string;
 }[] = [
   {
-    value: "stripe",
-    label: "Stripe",
-    secretPlaceholder: "whsec_...",
-    hint: "Dashboard → Developers → Webhooks → signing secret",
-  },
-  {
     value: "shopify",
     label: "Shopify",
     secretPlaceholder: "your-shopify-secret",
     hint: "Admin → Settings → Notifications → Webhooks",
-  },
-  {
-    value: "github",
-    label: "GitHub",
-    secretPlaceholder: "your-webhook-secret",
-    hint: "Set when creating the webhook in repository settings",
   },
 ];
 
@@ -211,20 +199,16 @@ export default function NewIntegrationPage() {
               </Hint>
             </Field>
 
-            {provider !== "github" && (
-              <Field
-                label={`${provider === "stripe" ? "Stripe secret key" : "Shopify Admin API token"} (optional)`}
-              >
-                <Input
-                  type="password"
-                  value={apiKey}
-                  onChange={setApiKey}
-                  placeholder={provider === "stripe" ? "sk_live_..." : "shpat_..."}
-                  mono
-                />
-                <Hint>Enables reconciliation (gap detection) and enriched delivery. Encrypted at rest.</Hint>
-              </Field>
-            )}
+            <Field label="Shopify Admin API token (optional)">
+              <Input
+                type="password"
+                value={apiKey}
+                onChange={setApiKey}
+                placeholder="shpat_..."
+                mono
+              />
+              <Hint>Enables reconciliation (gap detection) and enriched delivery. Encrypted at rest.</Hint>
+            </Field>
 
             {provider === "shopify" && (
               <Field label="Shopify store domain (required for reconciliation)">

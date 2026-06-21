@@ -14,18 +14,12 @@ const HOUR_MS = 60 * 60 * 1000;
 export const MATURITY_WINDOW_MS: Record<Provider, number> = {
   // Shopify: 20+ min orders/paid delays documented (Apr 2026 investigation) — wait a full hour.
   shopify: 1 * HOUR_MS,
-  // Stripe: provider rarely drops; delays are short, but keep the same conservative hour.
-  stripe: 1 * HOUR_MS,
-  // GitHub has no truth API to reconcile against; window kept for type completeness.
-  github: 1 * HOUR_MS,
 };
 
 // Past this age an undelivered, re-checked event is safe to call a confirmed gap.
 // Between maturity and confirmation we keep saying "unconfirmed".
 export const CONFIRMATION_AGE_MS: Record<Provider, number> = {
   shopify: 2 * HOUR_MS,
-  stripe: 2 * HOUR_MS,
-  github: 2 * HOUR_MS,
 };
 
 export function maturityWindowMs(provider: Provider): number {

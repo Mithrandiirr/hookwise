@@ -1,8 +1,4 @@
 import {
-  extractStripeResourceInfo,
-  fetchStripeResource,
-} from "@/lib/providers/stripe-api";
-import {
   extractShopifyResourceInfo,
   fetchShopifyResource,
 } from "@/lib/providers/shopify-api";
@@ -51,10 +47,6 @@ export async function enrichEvent(
   const payload = webhookEvent.payload as Record<string, unknown>;
   const headers = webhookEvent.headers as Record<string, string>;
 
-  if (integration.provider === "stripe") {
-    return enrichStripeEvent(apiKey, webhookEvent.eventType, payload);
-  }
-
   if (integration.provider === "shopify") {
     const shopDomain =
       headers["x-shopify-shop-domain"] ??
@@ -68,55 +60,6 @@ export async function enrichEvent(
   }
 
   return { ...EMPTY_RESULT, error: `Enrichment not supported for provider: ${integration.provider}` };
-}
-
-async function enrichStripeEvent(
-  apiKey: string,
-  eventType: string,
-  payload: Record<string, unknown>
-): Promise<EnrichmentResult> {
-  const resourceInfo = extractStripeResourceInfo(eventType, payload);
-  if (!resourceInfo) {
-    return { ...EMPTY_RESULT, error: `Cannot extract resource info from event type: ${eventType}` };
-  }
-
-  const start = Date.now();
-  const freshResource = await fetchStripeResource(
-    apiKey,
-    resourceInfo.resourcePath,
-    resourceInfo.resourceId
-  );
-  const fetchTimeMs = Date.now() - start;
-
-  if (!freshResource) {
-    return {
-      ...EMPTY_RESULT,
-      resourceType: resourceInfo.resourcePath,
-      resourceId: resourceInfo.resourceId,
-      fetchTimeMs,
-      error: "Failed to fetch resource from Stripe API",
-    };
-  }
-
-  // Merge: replace data.object with fresh resource, preserve event envelope
-  const enrichedPayload: Record<string, unknown> = {
-    ...payload,
-    data: {
-      ...(payload.data as Record<string, unknown>),
-      object: freshResource,
-    },
-    _hookwise_enriched: true,
-    _hookwise_enriched_at: new Date().toISOString(),
-  };
-
-  return {
-    success: true,
-    enrichedPayload,
-    resourceType: resourceInfo.resourcePath,
-    resourceId: resourceInfo.resourceId,
-    fetchTimeMs,
-    error: null,
-  };
 }
 
 async function enrichShopifyEvent(
